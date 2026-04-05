@@ -69,8 +69,19 @@ const employeSchema = new mongoose.Schema({
             },
             message: 'Le mot de passe doit contenir au moins 8 caractères, dont une majuscule, une minuscule, un chiffre et un caractère spécial.'
         }
+    },
+    statut: {
+        type: String,
+        enum: ["en congé", "actif", "inactif"],
+        default: "actif"
+    },
+    age: {
+        type: Number,
+        min: 18,
+        max: 65
     }
-}, { timestamps: true });
+}, { timestamps: true })
+
 
 // 🔒 Retirer le mot de passe des réponses JSON
 employeSchema.methods.toJSON = function() {

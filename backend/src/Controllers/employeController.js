@@ -1,150 +1,176 @@
-import Employe from '../models/employe.js';
-import jwt from 'jsonwebtoken';
+import jwt from "jsonwebtoken";
+import Employe from "../models/employe.js";
 
-//fonction signup employe
-export async function signupEmploye (req, res) {
-    try {
-        const {nom , prenom , mecano , localisation , email , role , telephone , MotDePasse} = req.body;
-        const employe = new Employe({nom , prenom , mecano , localisation , email , role , telephone , MotDePasse});
-        const savedEmploye = await employe.save();
+const JWT_SECRET = process.env.JWT_SECRET || "dev-secret";
 
+function getErrorMessage(error) {
+  if (error?.name === "ValidationError") {
+    return Object.values(error.errors)
+      .map((err) => err.message)
+      .join(", ");
+  }
+  if (error?.code === 11000) {
+    return "Valeur déjà utilisée (email ou mécano).";
+  }
+  return error?.message || "Une erreur est survenue.";
+}
 
-        return res.status(201).json( savedEmploye);
-
-    } catch (error) {
-        console.error("Error in signupEmploye controller", error);
-        return res.status(500).json({ message:"Internal server error " });
+function buildToken(employe) {
+  return jwt.sign(
+    { id: employe._id.toString(), role: employe.role, email: employe.email },
+    JWT_SECRET,
+    { expiresIn: "8h" }
+  );
     }
-};
 
-//fonction ajouter employe
-export async function ajouterEmploye (req, res) {
+export async function signupEmploye(req, res) {
     try {
-        const {nom , prenom , mecano , localisation , email , role , telephone , MotDePasse} = req.body;
-        const employe = new Employe({nom , prenom , mecano , localisation , email , role , telephone , MotDePasse});
-        const savedEmploye = await employe.save();
-
-
-        return res.status(201).json( savedEmploye);
-
+    const { nom, prenom, mecano, localisation, email, role, telephone, MotDePasse, age } =
+      req.body;
+    const employe = await Employe.create({
+      nom,
+      prenom,
+      mecano,
+      localisation,
+      email,
+      role,
+      telephone,
+      MotDePasse,
+      age,
+    });
+    const token = buildToken(employe);
+    return res.status(201).json({ token, employe });
     } catch (error) {
-        console.error("Error in ajouterEmploye contoller", error);
-        return res.status(500).json({ message:"Internal server error " });
-    }
-};
-
-//fonction login employe
-const loginEmploye = async (req, res) => {
-    try {
-        const { email, password } = req.body;
-
-        // Find employee by email
-        const employe = await EmployeModel.findOne({ email });
-        if (!employe) {
-            return res.status(401).json({ error: 'Invalid credentials' });
-        }
-
-        // Check password
-        const isPasswordValid = await employe.comparePassword(password);
-        if (!isPasswordValid) {
-            return res.status(401).json({ error: 'Invalid credentials' });
-        }
-
-        // Generate JWT token
-        const token = jwt.sign(
-            { id: employe._id, email: employe.email, role: employe.role },
-            process.env.JWT_SECRET || 'your-secret-key',
-            { expiresIn: '24h' }
-        );
-
-        return res.status(200).json({
-            message: 'Login successful',
-            token,
-            employe: {
-                id: employe._id,
-                nom: employe.nom,
-                prenom: employe.prenom,
-                email: employe.email,
-                role: employe.role
-            }
-        });
-
-    } catch (error) {
-        return res.status(500).json({ error: error.message });
+    return res.status(400).json({ error: getErrorMessage(error) });
     }
 }
 
-//fonction modifier employe
+export async function loginEmploye(req, res) {
+    try {
+        const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email et mot de passe requis." });
+    }
+    const employe = await Employe.findOne({ email: String(email).toLowerCase() });
+        if (!employe) {
+      return res.status(401).json({ error: "Identifiants invalides." });
+        }
+    const isMatch = await employe.comparePassword(password);
+    if (!isMatch) {
+      return res.status(401).json({ error: "Identifiants invalides." });
+        }
+    const token = buildToken(employe);
+    return res.status(200).json({ token, employe });
+    } catch (error) {
+    return res.status(500).json({ error: getErrorMessage(error) });
+    }
+}
+
+export async function getCurrentUser(req, res) {
+  try {
+    const employe = await Employe.findById(req.user.id).select("-MotDePasse");
+    if (!employe) {
+      return res.status(404).json({ success: false, message: "Utilisateur introuvable." });
+    }
+    const plain = employe.toObject();
+    return res.status(200).json({
+      success: true,
+      user: {
+        ...plain,
+        id: plain._id?.toString(),
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, error: getErrorMessage(error) });
+  }
+}
+
+export async function ajouterEmploye(req, res) {
+  return signupEmploye(req, res);
+}
+
 export async function modifierEmploye(req, res) {
     try {  
-        const {nom , prenom , mecano , localisation , email , role , telephone , MotDePasse} = req.body;
-        const updatedEmploye = await Employe.findByIdAndUpdate(
-            req.params.id,
-            {nom , prenom , mecano , localisation , email , role , telephone , MotDePasse},
-            { returnDocument: 'after' }
-        );
-        if (!updatedEmploye) 
+    const { MotDePasse, statut, ...rest } = req.body;
+
+    const updatedEmploye = await Employe.findById(req.params.id); // ← corrigé
+    if (!updatedEmploye) {
         return res.status(404).json({ error: "Employé non trouvé" });
-        res.status(200).json({ message: "Employé modifié avec succès", updatedEmploye });
+    }
+
+    // Appliquer les champs classiques
+    Object.assign(updatedEmploye, rest);
+
+    // Appliquer le statut explicitement
+    if (statut !== undefined) {
+      updatedEmploye.statut = statut; // ← ajouté
+    }
+
+    // Appliquer le mot de passe seulement s'il est fourni
+    if (MotDePasse) {
+      updatedEmploye.MotDePasse = MotDePasse;
+    }
+
+    await updatedEmploye.save();
+    return res.status(200).json({
+      message: "Employé modifié avec succès",
+      employe: updatedEmploye,
+    });
     } catch (error) {
-        console.error("Error in updateEmploye controller", error);
-        res.status(500).json({message: "Intrernal server error"});
+    return res.status(400).json({ error: getErrorMessage(error) });
     }
 }
 
 export async function supprimerEmploye(req, res) {
     try {
         const deletedEmploye = await Employe.findByIdAndDelete(req.params.id);
-        if (!deletedEmploye) 
+    if (!deletedEmploye) {
          return res.status(404).json({ error: "Employé non trouvé" });
-        res.status(200).json({ message: "Employé supprimé avec succès", deletedEmploye });
+    }
+    return res.status(200).json({ message: "Employé supprimé avec succès", employe: deletedEmploye });
     } catch (error) {
-        console.error("Error in deleteEmploye controller", error);
-        res.status(500).json({message: "Intrernal server error"});
+    return res.status(500).json({ error: getErrorMessage(error) });
     }
 }
 
 export async function listerEmploye(req, res) {
     try {
-        const employe = await Employe.find();
-        res.status(200).json(employe);
+    const employes = await Employe.find().sort({ createdAt: -1 });
+    return res.status(200).json(employes);
     } catch (error) {
-        res.status(500).json({ message:"Internal server error " });
+    return res.status(500).json({ error: getErrorMessage(error) });
     }
-};
+}
 
-// fonction forgot password (generates a reset token; in production send email)
-const forgotPassword = async (req, res) => {
+export async function forgotPassword(req, res) {
     try {
         const { email } = req.body;
-        if (!email) return res.status(400).json({ error: 'Email required' });
-
-        const employe = await EmployeModel.findOne({ email });
-        // To avoid user enumeration, always respond with success message
-        if (!employe) {
-            return res.status(200).json({ message: 'If that email exists, a reset link was sent.' });
-        }
-
-        // Create a short-lived reset token (JWT)
-        const resetToken = jwt.sign(
-            { id: employe._id, email: employe.email },
-            process.env.JWT_SECRET || 'your-secret-key',
-            { expiresIn: '1h' }
-        );
-
-        // In production: send resetToken via email link. For now return it for development.
-        return res.status(200).json({ message: 'Reset token generated', resetToken });
-    } catch (error) {
-        return res.status(500).json({ error: error.message });
+    if (!email) {
+      return res.status(400).json({ error: "Email required" });
     }
-};
+    const employe = await Employe.findOne({ email: String(email).toLowerCase() });
+        if (!employe) {
+      return res.status(200).json({ message: "If that email exists, reset instructions were sent." });
+        }
+        const resetToken = jwt.sign(
+      { id: employe._id.toString(), email: employe.email, type: "reset" },
+      JWT_SECRET,
+      { expiresIn: "1h" }
+        );
+    return res.status(200).json({ message: "Reset token generated", resetToken });
+    } catch (error) {
+    return res.status(500).json({ error: getErrorMessage(error) });
+        }
+}
+
 
 export default {
     signupEmploye,
-    ajouterEmploye,
     loginEmploye,
+  getCurrentUser,
+  ajouterEmploye,
     modifierEmploye,
     supprimerEmploye,
     listerEmploye,
-    forgotPassword
+    forgotPassword,
 };

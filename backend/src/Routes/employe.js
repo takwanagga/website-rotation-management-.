@@ -1,15 +1,26 @@
 import express from "express";
-import EmployeController from "../Controllers/employeController.js";
-import employemodel from "../models/employe.js";
+import {
+  signupEmploye,
+  ajouterEmploye,
+  loginEmploye,
+  modifierEmploye,
+  supprimerEmploye,
+  listerEmploye,
+  forgotPassword,
+  getCurrentUser,
+} from "../Controllers/employeController.js";
+import { authenticate, authorize } from "../middleware/auth.js";
 
 const router = express.Router();
 
-router.post("/signup", EmployeController.signupEmploye) 
-router.post("/login", EmployeController.loginEmploye)
-router.post("/forgot-password", EmployeController.forgotPassword)
-router.post("/ajouter", EmployeController.ajouterEmploye)
-router.post("/modifier/:id", EmployeController.modifierEmploye)
-router.get("/supprimer/:id", EmployeController.supprimerEmploye)
-router.get("/lister", EmployeController.listerEmploye)
+router.post("/signup", signupEmploye);
+router.post("/login", loginEmploye);
+router.post("/forgot-password", forgotPassword);
+router.get("/me", authenticate, getCurrentUser);
+router.get("/verify", authenticate, getCurrentUser);
+router.post("/ajouter", authenticate, authorize(["admin"]), ajouterEmploye);
+router.post("/modifier/:id", authenticate, authorize(["admin"]), modifierEmploye);
+router.get("/supprimer/:id", authenticate, authorize(["admin"]), supprimerEmploye);
+router.get("/lister", authenticate, listerEmploye);
 
 export default router;
