@@ -1,51 +1,85 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
-import { verifyUser } from "../lib/api";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import { verifyUser } from "../lib/api.js";
 
+const AuthContext = createContext(null);
 
-
-export const AuthContext = createContext();
-
-export const AuthProvider = ({ children }) => {
+export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const checkUser = async () => {
+    let cancelled = false;
+
+    const bootstrap = async () => {
       try {
         const token = localStorage.getItem("token");
-        if (token) {
-          const response = await verifyUser(); // uses axiosInstance internally
-          if (response.data.success) {
-            setUser(response.data.user);
-          }
+        if (!token) {
+          if (!cancelled) setUser(null);
+          return;
+        }
+        const response = await verifyUser();
+        if (cancelled) return;
+        if (response.data?.success) {
+          setUser(response.data.user);
         } else {
           setUser(null);
+          localStorage.removeItem("token");
         }
-      } catch (error) {
-        setUser(null);
+      } catch {
+        if (!cancelled) {
+          setUser(null);
+          localStorage.removeItem("token");
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
-    checkUser();
+
+    bootstrap();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const login = (user, token) => {
-    setUser(user);
+  const login = useCallback((userData, token) => {
+    setUser(userData);
     if (token) localStorage.setItem("token", token);
-  };
+  }, []);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setUser(null);
     localStorage.removeItem("token");
-  };
+  }, []);
+
+  const value = useMemo(
+    () => ({
+      user,
+      loading,
+      login,
+      logout,
+      isAuthenticated: Boolean(user),
+    }),
+    [user, loading, login, logout]
+  );
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
-      {children}
-    </AuthContext.Provider>
+    <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
   );
-};
+}
 
-export const useAuth = () => useContext(AuthContext);
-export default AuthProvider;
+export function useAuth() {
+  const ctx = useContext(AuthContext);
+  if (ctx == null) {
+    throw new Error("useAuth doit être utilisé à l'intérieur d'un AuthProvider.");
+  }
+  return ctx;
+}
+
+export { AuthContext };

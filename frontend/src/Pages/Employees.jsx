@@ -1,73 +1,80 @@
-import React, { useState, useEffect } from "react";
-import AdminSidebar from "../components/AdminSidebar";
-import DataTable from "react-data-table-component";
-import { Edit2, Trash2, Plus, X, Search } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import AdminSidebar from "../components/AdminSidebar.jsx";
+import EmployeeTable from "../components/employees/EmployeeTable.jsx";
+import { Plus, X, Search } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
-import api from "../api/axios";
+import { employeeService } from "../services/employeeService.js";
 
-const Employees = () => {
+const emptyForm = {
+  nom: "",
+  prenom: "",
+  mecano: "",
+  localisation: "",
+  email: "",
+  role: "chauffeur",
+  telephone: "",
+  age: "",
+  MotDePasse: "",
+  statut: "actif",
+};
+
+const STATUTS_CYCLE = ["actif", "inactif", "en congé"];
+
+export default function Employees() {
   const [employes, setEmployes] = useState([]);
   const [filteredEmployes, setFilteredEmployes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const perPage = 10;
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [formData, setFormData] = useState(emptyForm);
 
-  const [formData, setFormData] = useState({
-    nom: "",
-    prenom: "",
-    mecano: "",
-    localisation: "",
-    email: "",
-    role: "chauffeur",
-    telephone: "",
-    age: "",
-    MotDePasse: "",
-    statut: "actif",
-  });
-
-  const fetchEmployes = async () => {
+  const fetchEmployes = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await api.get("/employe/lister");
-      setEmployes(res.data);
-      setFilteredEmployes(res.data);
-    } catch (error) {
+      const list = await employeeService.list();
+      setEmployes(list);
+      setFilteredEmployes(list);
+    } catch {
       toast.error("Erreur lors de la récupération des employés");
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchEmployes();
   }, []);
 
   useEffect(() => {
+    fetchEmployes();
+  }, [fetchEmployes]);
+
+  useEffect(() => {
+    const q = search.toLowerCase();
     const result = employes.filter(
       (emp) =>
-        emp.nom.toLowerCase().includes(search.toLowerCase()) ||
-        emp.prenom.toLowerCase().includes(search.toLowerCase()) ||
-        emp.mecano.toLowerCase().includes(search.toLowerCase())
+        emp.nom?.toLowerCase().includes(q) ||
+        emp.prenom?.toLowerCase().includes(q) ||
+        emp.mecano?.toLowerCase().includes(q)
     );
     setFilteredEmployes(result);
+    setPage(1);
   }, [search, employes]);
 
   const handleInputChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Toggle statut directly from the table (inline)
   const handleToggleStatut = async (employe) => {
-    const statuts = ["actif", "inactif", "en cong\u00e9"];
-    const currentIndex = statuts.indexOf(employe.statut || "actif");
-    const newStatut = statuts[(currentIndex + 1) % statuts.length];
+    let i = STATUTS_CYCLE.indexOf(employe.statut || "actif");
+    if (i < 0) i = 0;
+    const next = STATUTS_CYCLE[(i + 1) % STATUTS_CYCLE.length];
     try {
-      await api.post(`/employe/modifier/${employe._id}`, { statut: newStatut });
-      toast.success(`Statut chang\u00e9 en: ${newStatut}`);
+      await employeeService.setStatut(employe._id, next);
+      toast.success(`Statut changé en : ${next}`);
       fetchEmployes();
-    } catch (error) {
+    } catch {
       toast.error("Erreur lors du changement de statut");
     }
   };
@@ -76,31 +83,20 @@ const Employees = () => {
     if (employe) {
       setEditingId(employe._id);
       setFormData({
-        nom: employe.nom,
-        prenom: employe.prenom,
-        mecano: employe.mecano,
-        localisation: employe.localisation || "",
-        email: employe.email,
-        role: employe.role,
-        telephone: employe.telephone || "",
-        age: employe.age || "",
+        nom: employe.nom ?? "",
+        prenom: employe.prenom ?? "",
+        mecano: employe.mecano ?? "",
+        localisation: employe.localisation ?? "",
+        email: employe.email ?? "",
+        role: employe.role ?? "chauffeur",
+        telephone: employe.telephone ?? "",
+        age: employe.age != null ? String(employe.age) : "",
         MotDePasse: "",
         statut: employe.statut || "actif",
       });
     } else {
       setEditingId(null);
-      setFormData({
-        nom: "",
-        prenom: "",
-        mecano: "",
-        localisation: "",
-        email: "",
-        role: "chauffeur",
-        telephone: "",
-        age: "",
-        MotDePasse: "",
-        statut: "actif",
-      });
+      setFormData(emptyForm);
     }
     setIsModalOpen(true);
   };
@@ -113,151 +109,35 @@ const Employees = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      const payload = {
+        ...formData,
+        age: formData.age === "" ? undefined : Number(formData.age),
+      };
       if (editingId) {
-        const payload = { ...formData };
         if (!payload.MotDePasse) delete payload.MotDePasse;
-        await api.post(`/employe/modifier/${editingId}`, payload);
+        await employeeService.update(editingId, payload);
         toast.success("Employé modifié avec succès");
       } else {
-        await api.post("/employe/ajouter", formData);
+        await employeeService.create(payload);
         toast.success("Employé ajouté avec succès");
       }
       closeForm();
       fetchEmployes();
-    } catch (error) {
-      toast.error(error.response?.data?.error || "Une erreur est survenue");
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Une erreur est survenue");
     }
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm("Êtes-vous sûr de vouloir supprimer cet employé ?")) {
-      try {
-        await api.get(`/employe/supprimer/${id}`);
-        toast.success("Employé supprimé avec succès");
-        fetchEmployes();
-      } catch (error) {
-        toast.error("Erreur lors de la suppression");
-      }
+    if (!window.confirm("Êtes-vous sûr de vouloir supprimer cet employé ?")) return;
+    try {
+      await employeeService.remove(id);
+      toast.success("Employé supprimé avec succès");
+      fetchEmployes();
+    } catch {
+      toast.error("Erreur lors de la suppression");
     }
   };
-
-  const columns = [
-    {
-      name: "Mécano",
-      selector: (row) => row.mecano,
-      sortable: true,
-      width: "110px",
-    },
-    {
-      name: "Nom",
-      selector: (row) => row.nom,
-      sortable: true,
-    },
-    {
-      name: "Prénom",
-      selector: (row) => row.prenom,
-      sortable: true,
-    },
-    {
-      name: "Âge",
-      selector: (row) => row.age || "-",
-      sortable: true,
-      width: "80px",
-    },
-    {
-      name: "Rôle",
-      selector: (row) => row.role,
-      sortable: true,
-      cell: (row) => (
-        <span
-          className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${
-            row.role === "admin"
-              ? "bg-purple-100 text-purple-800"
-              : row.role === "chauffeur"
-              ? "bg-blue-100 text-blue-800"
-              : "bg-green-100 text-green-800"
-          }`}
-        >
-          {row.role}
-        </span>
-      ),
-    },
-    {
-      name: "Email",
-      selector: (row) => row.email,
-      sortable: true,
-      hide: "sm",
-    },
-    // ─── NEW STATUS COLUMN ───────────────────────────────────────────────────
-    {
-      name: "Statut",
-      sortable: true,
-      selector: (row) => row.statut,
-      width: "140px",
-      cell: (row) => {
-        const status = row.statut || "actif";
-        const getStatusStyles = (status) => {
-          switch (status) {
-            case "actif":
-              return "bg-emerald-100 text-emerald-700 hover:bg-emerald-200";
-            case "inactif":
-              return "bg-red-100 text-red-600 hover:bg-red-200";
-            case "en congé":
-              return "bg-yellow-100 text-yellow-700 hover:bg-yellow-200";
-            default:
-              return "bg-gray-100 text-gray-700 hover:bg-gray-200";
-          }
-        };
-        
-        const getStatusLabel = (status) => {
-          switch (status) {
-            case "actif":
-              return "Actif";
-            case "inactif":
-              return "Inactif";
-            case "en congé":
-              return "En congé";
-            default:
-              return status;
-          }
-        };
-
-        return (
-          <button
-            onClick={() => handleToggleStatut(row)}
-            title="Cliquer pour changer de statut"
-            className={`relative inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all duration-200 cursor-pointer select-none ${getStatusStyles(status)}`}
-          >
-            <span className="w-2 h-2 rounded-full bg-current" />
-            {getStatusLabel(status)}
-          </button>
-        );
-      },
-    },
-    // ────────────────────────────────────────────────────────────────────────
-    {
-      name: "Actions",
-      cell: (row) => (
-        <div className="flex gap-2">
-          <button
-            onClick={() => openForm(row)}
-            className="p-2 text-blue-600 hover:bg-blue-100 rounded transition-colors"
-            title="Modifier"
-          >
-            <Edit2 size={18} />
-          </button>
-          <button
-            onClick={() => handleDelete(row._id)}
-            className="p-2 text-red-600 hover:bg-red-100 rounded transition-colors"
-            title="Supprimer"
-          >
-            <Trash2 size={18} />
-          </button>
-        </div>
-      ),
-      width: "120px",
-    },
-  ];
 
   return (
     <div className="flex">
@@ -265,7 +145,6 @@ const Employees = () => {
       <div className="flex-1 md:ml-64 bg-gray-50 min-h-screen pt-16 md:pt-0">
         <Toaster position="top-right" />
 
-        {/* Top Header */}
         <div className="bg-white shadow-sm p-4 md:p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <h1 className="text-2xl md:text-3xl font-bold text-gray-800">
             Gestion des Employés
@@ -277,7 +156,7 @@ const Employees = () => {
                 size={18}
               />
               <input
-                type="text"
+                type="search"
                 placeholder="Rechercher..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -285,6 +164,7 @@ const Employees = () => {
               />
             </div>
             <button
+              type="button"
               onClick={() => openForm()}
               className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
             >
@@ -294,42 +174,31 @@ const Employees = () => {
           </div>
         </div>
 
-        {/* Content */}
         <div className="p-4 md:p-8">
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <DataTable
-              columns={columns}
-              data={filteredEmployes}
-              progressPending={loading}
-              pagination
-              highlightOnHover
-              responsive
-              noDataComponent={
-                <div className="p-8 text-gray-500">
-                  Aucun employé trouvé.
-                </div>
-              }
-              customStyles={{
-                headRow: {
-                  style: {
-                    backgroundColor: "#f9fafb",
-                    fontWeight: "600",
-                  },
-                },
-              }}
+            <EmployeeTable
+              rows={filteredEmployes}
+              loading={loading}
+              page={page}
+              perPage={perPage}
+              totalCount={filteredEmployes.length}
+              onPageChange={setPage}
+              onEdit={openForm}
+              onDelete={handleDelete}
+              onToggleStatut={handleToggleStatut}
             />
           </div>
         </div>
 
-        {/* Modal */}
         {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
             <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
               <div className="flex justify-between items-center p-6 border-b">
                 <h2 className="text-xl font-bold text-gray-800">
-                  {editingId ? "Modifier l'Employé" : "Ajouter un Employé"}
+                  {editingId ? "Modifier l'employé" : "Ajouter un employé"}
                 </h2>
                 <button
+                  type="button"
                   onClick={closeForm}
                   className="text-gray-500 hover:bg-gray-100 p-2 rounded-full transition-colors"
                 >
@@ -404,10 +273,11 @@ const Employees = () => {
                     <input
                       type="text"
                       name="telephone"
+                      inputMode="numeric"
                       value={formData.telephone}
                       onChange={handleInputChange}
                       className="w-full p-2 border rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
-                      placeholder="8 chiffres minimum"
+                      placeholder="8 chiffres"
                     />
                   </div>
                   <div>
@@ -421,6 +291,36 @@ const Employees = () => {
                       onChange={handleInputChange}
                       className="w-full p-2 border rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
                     />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Âge
+                    </label>
+                    <input
+                      type="number"
+                      name="age"
+                      min={18}
+                      max={65}
+                      value={formData.age}
+                      onChange={handleInputChange}
+                      className="w-full p-2 border rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                      placeholder="18–65"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Statut
+                    </label>
+                    <select
+                      name="statut"
+                      value={formData.statut}
+                      onChange={handleInputChange}
+                      className="w-full p-2 border rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                    >
+                      <option value="actif">Actif</option>
+                      <option value="inactif">Inactif</option>
+                      <option value="en congé">En congé</option>
+                    </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -440,86 +340,44 @@ const Employees = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Mot de Passe{" "}
+                      Mot de passe{" "}
                       {editingId
                         ? "(laisser vide pour ne pas changer)"
                         : "*"}
                     </label>
-                      <input
-                        type="password"
-                        name="MotDePasse"
-                        value={formData.MotDePasse}
-                        onChange={handleInputChange}
-                        required={!editingId}
+                    <input
+                      type="password"
+                      name="MotDePasse"
+                      value={formData.MotDePasse}
+                      onChange={handleInputChange}
+                      required={!editingId}
+                      autoComplete="new-password"
                       className="w-full p-2 border rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
-                      />
-                    </div>
-
-                  {/* ─── STATUT TOGGLE ──────────────────────────────────────── */}
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Statut de l'employé
-                    </label>
-                    <div className="flex items-center gap-4">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            statut: prev.statut === "actif" ? "inactif" : "actif",
-                          }))
-                        }
-                        className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 ${
-                          formData.statut === "actif"
-                            ? "bg-emerald-500"
-                            : "bg-gray-300"
-                        }`}
-                      >
-                        <span
-                          className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform duration-300 ${
-                            formData.statut === "actif"
-                              ? "translate-x-8"
-                              : "translate-x-1"
-                          }`}
-                        />
-                      </button>
-                      <span
-                        className={`text-sm font-semibold ${
-                          formData.statut === "actif"
-                            ? "text-emerald-600"
-                            : "text-red-500"
-                        }`}
-                      >
-                        {formData.statut === "actif" ? "Actif" : "Inactif"}
-                      </span>
-                    </div>
+                    />
                   </div>
-                  {/* ──────────────────────────────────────────────────────── */}
                 </form>
-                </div>
+              </div>
 
               <div className="p-6 border-t bg-gray-50 rounded-b-xl flex justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={closeForm}
+                <button
+                  type="button"
+                  onClick={closeForm}
                   className="px-4 py-2 text-gray-700 bg-white border rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    Annuler
-                  </button>
-                  <button
-                    type="submit"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
                   form="employe-form"
                   className="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
-                  >
+                >
                   {editingId ? "Enregistrer" : "Ajouter"}
-                  </button>
-                </div>
+                </button>
+              </div>
             </div>
           </div>
         )}
       </div>
     </div>
   );
-};
-
-export default Employees;
+}
