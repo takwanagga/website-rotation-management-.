@@ -27,5 +27,5 @@ const ligneSchema = new mongoose.Schema({
         default: 'actif' 
     }
 }, { timestamps: true });
-const Ligne = mongoose.model('Ligne', ligneSchema)
-export default Ligne
+
+export default mongoose.model('Ligne', ligneSchema);

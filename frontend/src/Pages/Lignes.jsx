@@ -6,10 +6,9 @@ import toast, { Toaster } from "react-hot-toast";
 import { ligneService } from "../services/ligneService.js";
 
 const emptyForm = {
-  code: "",
-  nom: "",
-  depart: "",
-  arrivee: "",
+  libelle: "",
+  debutDeLigne: "",
+  finDeLigne: "",
   distance: "",
 };
 
@@ -46,10 +45,9 @@ export default function Lignes() {
     const q = search.toLowerCase();
     const result = lignes.filter(
       (ligne) =>
-        ligne.code?.toLowerCase().includes(q) ||
-        ligne.nom?.toLowerCase().includes(q) ||
-        ligne.depart?.toLowerCase().includes(q) ||
-        ligne.arrivee?.toLowerCase().includes(q)
+        ligne.libelle?.toLowerCase().includes(q) ||
+        ligne.debutDeLigne?.toLowerCase().includes(q) ||
+        ligne.finDeLigne?.toLowerCase().includes(q)
     );
     setFilteredLignes(result);
     setPage(1);
@@ -64,10 +62,9 @@ export default function Lignes() {
     if (ligne) {
       setEditingId(ligne._id);
       setFormData({
-        code: ligne.code ?? "",
-        nom: ligne.nom ?? "",
-        depart: ligne.depart ?? "",
-        arrivee: ligne.arrivee ?? "",
+        libelle: ligne.libelle ?? "",
+        debutDeLigne: ligne.debutDeLigne ?? "",
+        finDeLigne: ligne.finDeLigne ?? "",
         distance: ligne.distance != null ? String(ligne.distance) : "",
       });
     } else {
@@ -103,16 +100,20 @@ export default function Lignes() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Êtes-vous sûr de vouloir supprimer cette ligne ?")) return;
+ 
+
+  const handleToggleStatut = async (ligne) => {
     try {
-      await ligneService.remove(id);
-      toast.success("Ligne supprimée avec succès");
+      const newStatut = ligne.status === "actif" ? "inactif" : "actif";
+      await ligneService.update(ligne._id, { ...ligne, status: newStatut });
+      toast.success("Statut modifié avec succès");
       fetchLignes();
     } catch {
-      toast.error("Erreur lors de la suppression");
+      toast.error("Erreur lors de la modification du statut");
     }
   };
+
+ 
 
   return (
     <div className="flex">
@@ -159,7 +160,7 @@ export default function Lignes() {
               totalCount={filteredLignes.length}
               onPageChange={setPage}
               onEdit={openForm}
-              onDelete={handleDelete}
+              onToggleStatut={handleToggleStatut}
             />
           </div>
         </div>
@@ -194,24 +195,10 @@ export default function Lignes() {
                       required
                       type="text"
                       name="code"
-                      value={formData.code}
+                      value={formData.libelle}
                       onChange={handleInputChange}
                       className="w-full p-2 border rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
                       placeholder="Ex: LIGNE-101"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Nom *
-                    </label>
-                    <input
-                      required
-                      type="text"
-                      name="nom"
-                      value={formData.nom}
-                      onChange={handleInputChange}
-                      className="w-full p-2 border rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
-                      placeholder="Ex: Tunis - Ariana"
                     />
                   </div>
                   <div>
@@ -222,7 +209,7 @@ export default function Lignes() {
                       required
                       type="text"
                       name="depart"
-                      value={formData.depart}
+                      value={formData.debutDeLigne}
                       onChange={handleInputChange}
                       className="w-full p-2 border rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
                       placeholder="Point de départ"
@@ -236,7 +223,7 @@ export default function Lignes() {
                       required
                       type="text"
                       name="arrivee"
-                      value={formData.arrivee}
+                      value={formData.finDeLigne}
                       onChange={handleInputChange}
                       className="w-full p-2 border rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
                       placeholder="Point d'arrivée"

@@ -65,8 +65,8 @@ export const deletePlanning = (id) =>
 export const getPlanningById = (id) =>
   axiosInstance.get(`/planning/${id}`);
 
-export const publishPlanningById = (id) =>
-  axiosInstance.post(`/planning/publier/${id}`);
+export const publishPlanningById = (id, publie = true) =>
+  axiosInstance.post(`/planning/publier/${id}`, { publie });
 
 export const listPlanningByEmployee = (employeId) =>
   axiosInstance.get(`/planning/employe/${employeId}`);

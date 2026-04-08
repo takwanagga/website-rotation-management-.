@@ -63,6 +63,8 @@ export async function listerBus(req, res) {
     }
 };
 
+
+
 export default {
     ajouterBus,
     modifierBus,

@@ -1,6 +1,28 @@
 import { useMemo } from "react";
 import { Edit2, Trash2 } from "lucide-react";
 
+function statusStyles(status) {
+  switch (status) {
+    case "actif":
+      return "bg-emerald-100 text-emerald-700 hover:bg-emerald-200";
+    case "inactif":
+      return "bg-red-100 text-red-600 hover:bg-red-200";
+    default:
+      return "bg-gray-100 text-gray-700 hover:bg-gray-200";
+  }
+}
+
+function statusLabel(status) {
+  switch (status) {
+    case "actif":
+      return "Actif";
+    case "inactif":
+      return "Inactif";
+    default:
+      return status || "Actif";
+  }
+}
+
 export default function LigneTable({
   rows,
   loading,
@@ -10,6 +32,7 @@ export default function LigneTable({
   onPageChange,
   onEdit,
   onDelete,
+  onToggleStatut,
 }) {
   const totalPages = Math.max(1, Math.ceil(totalCount / perPage));
 
@@ -38,47 +61,60 @@ export default function LigneTable({
         <table className="w-full text-sm text-left">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200 text-gray-700 font-semibold">
-              <th className="px-4 py-3 whitespace-nowrap">Code</th>
-              <th className="px-4 py-3">Nom</th>
-              <th className="px-4 py-3">Départ</th>
-              <th className="px-4 py-3">Arrivée</th>
+              <th className="px-4 py-3 whitespace-nowrap">Libellé</th>
+              <th className="px-4 py-3">Début de ligne</th>
+              <th className="px-4 py-3">Fin de ligne</th>
               <th className="px-4 py-3 hidden md:table-cell">Distance (km)</th>
+              <th className="px-4 py-3 whitespace-nowrap">Statut</th>
               <th className="px-4 py-3 whitespace-nowrap">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {slice.map((row) => (
-              <tr
-                key={row._id}
-                className="border-b border-gray-100 hover:bg-gray-50/80"
-              >
-                <td className="px-4 py-3 font-medium">{row.code}</td>
-                <td className="px-4 py-3">{row.nom}</td>
-                <td className="px-4 py-3">{row.depart}</td>
-                <td className="px-4 py-3">{row.arrivee}</td>
-                <td className="px-4 py-3 hidden md:table-cell">{row.distance ?? "—"}</td>
-                <td className="px-4 py-3">
-                  <div className="flex gap-2">
+            {slice.map((row) => {
+              const status = row.status || "actif";
+              return (
+                <tr
+                  key={row._id}
+                  className="border-b border-gray-100 hover:bg-gray-50/80"
+                >
+                  <td className="px-4 py-3 font-medium">{row.libelle}</td>
+                  <td className="px-4 py-3">{row.debutDeLigne}</td>
+                  <td className="px-4 py-3">{row.finDeLigne}</td>
+                  <td className="px-4 py-3 hidden md:table-cell">{row.distance ?? "—"}</td>
+                  <td className="px-4 py-3">
                     <button
                       type="button"
-                      onClick={() => onEdit(row)}
-                      className="p-2 text-blue-600 hover:bg-blue-100 rounded transition-colors"
-                      title="Modifier"
+                      onClick={() => onToggleStatut(row)}
+                      title="Cliquer pour changer de statut"
+                      className={`relative inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-colors cursor-pointer select-none ${statusStyles(status)}`}
                     >
-                      <Edit2 size={18} />
+                      <span className="w-2 h-2 rounded-full bg-current" />
+                      {statusLabel(status)}
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => onDelete(row._id)}
-                      className="p-2 text-red-600 hover:bg-red-100 rounded transition-colors"
-                      title="Supprimer"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => onEdit(row)}
+                        className="p-2 text-blue-600 hover:bg-blue-100 rounded transition-colors"
+                        title="Modifier"
+                      >
+                        <Edit2 size={18} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onDelete(row._id)}
+                        className="p-2 text-red-600 hover:bg-red-100 rounded transition-colors"
+                        title="Supprimer"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

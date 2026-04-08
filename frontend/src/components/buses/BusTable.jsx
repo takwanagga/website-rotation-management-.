@@ -3,9 +3,13 @@ import { Edit2, Trash2 } from "lucide-react";
 
 function statusStyles(status) {
   switch (status) {
-    case "actif":
+    case "disponible":
       return "bg-emerald-100 text-emerald-700 hover:bg-emerald-200";
-    case "inactif":
+    case "en service":
+      return "bg-blue-100 text-blue-700 hover:bg-blue-200";
+    case "hors service":
+      return "bg-red-100 text-red-600 hover:bg-red-200";
+    case "retire":
       return "bg-red-100 text-red-600 hover:bg-red-200";
     case "maintenance":
       return "bg-yellow-100 text-yellow-700 hover:bg-yellow-200";
@@ -16,10 +20,14 @@ function statusStyles(status) {
 
 function statusLabel(status) {
   switch (status) {
-    case "actif":
-      return "Actif";
-    case "inactif":
-      return "Inactif";
+    case "disponible":
+      return "Disponible";
+    case "en service":
+      return "En service";
+    case "hors service":
+      return "Hors service";
+    case "retire":
+      return "Retiré";
     case "maintenance":
       return "Maintenance";
     default:
@@ -35,7 +43,6 @@ export default function BusTable({
   totalCount,
   onPageChange,
   onEdit,
-  onDelete,
   onToggleStatut,
 }) {
   const totalPages = Math.max(1, Math.ceil(totalCount / perPage));
@@ -66,25 +73,21 @@ export default function BusTable({
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200 text-gray-700 font-semibold">
               <th className="px-4 py-3 whitespace-nowrap">Immatriculation</th>
-              <th className="px-4 py-3">Numéro</th>
-              <th className="px-4 py-3 whitespace-nowrap">Capacité</th>
-              <th className="px-4 py-3">Type</th>
+              <th className="px-4 py-3">Modèle</th>
               <th className="px-4 py-3 whitespace-nowrap">Statut</th>
               <th className="px-4 py-3 whitespace-nowrap">Actions</th>
             </tr>
           </thead>
           <tbody>
             {slice.map((row) => {
-              const status = row.statut || "actif";
+              const status = row.statut || "disponible";
               return (
                 <tr
                   key={row._id}
                   className="border-b border-gray-100 hover:bg-gray-50/80"
                 >
                   <td className="px-4 py-3 font-medium">{row.immatriculation}</td>
-                  <td className="px-4 py-3">{row.numero}</td>
-                  <td className="px-4 py-3">{row.capacite ?? "—"}</td>
-                  <td className="px-4 py-3">{row.type || "Standard"}</td>
+                  <td className="px-4 py-3">{row.model || "—"}</td>
                   <td className="px-4 py-3">
                     <button
                       type="button"
@@ -106,14 +109,7 @@ export default function BusTable({
                       >
                         <Edit2 size={18} />
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => onDelete(row._id)}
-                        className="p-2 text-red-600 hover:bg-red-100 rounded transition-colors"
-                        title="Supprimer"
-                      >
-                        <Trash2 size={18} />
-                      </button>
+                      
                     </div>
                   </td>
                 </tr>

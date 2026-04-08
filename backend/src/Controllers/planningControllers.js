@@ -1,5 +1,41 @@
 import Planning from '../models/planning.js';
 
+async function findPlanningConflict({ date, heuredebut, ligne, bus, employe, excludeId }) {
+    const baseFilter = { date, heuredebut, ligne: { $ne: ligne } };
+    if (excludeId) {
+        baseFilter._id = { $ne: excludeId };
+    }
+
+    const [employeeConflict, busConflict] = await Promise.all([
+        Planning.findOne({ ...baseFilter, employe }).populate('ligne').populate('employe'),
+        Planning.findOne({ ...baseFilter, bus }).populate('ligne').populate('bus'),
+    ]);
+
+    if (employeeConflict) {
+        return {
+            status: 409,
+            payload: {
+                message: "Conflit: employé déjà affecté à une autre ligne sur le même créneau",
+                conflictType: "employee",
+                conflictWith: employeeConflict,
+            },
+        };
+    }
+
+    if (busConflict) {
+        return {
+            status: 409,
+            payload: {
+                message: "Conflit: bus déjà affecté à une autre ligne sur le même créneau",
+                conflictType: "bus",
+                conflictWith: busConflict,
+            },
+        };
+    }
+
+    return null;
+}
+
 // Fonction ajouter planning
 export async function ajouterPlanning(req, res) {
     try {
@@ -8,6 +44,11 @@ export async function ajouterPlanning(req, res) {
         // Validation basique
         if (!date || !heuredebut || !heurefin || !ligne || !bus || !employe) {
             return res.status(400).json({ message: "Tous les champs sont obligatoires" });
+        }
+
+        const conflict = await findPlanningConflict({ date, heuredebut, ligne, bus, employe });
+        if (conflict) {
+            return res.status(conflict.status).json(conflict.payload);
         }
 
         const planning = new Planning({ 
@@ -38,6 +79,18 @@ export async function ajouterPlanning(req, res) {
 export async function modifierPlanning(req, res) {
     try {
         const { date, heuredebut, heurefin, ligne, bus, employe } = req.body;
+
+        const conflict = await findPlanningConflict({
+            date,
+            heuredebut,
+            ligne,
+            bus,
+            employe,
+            excludeId: req.params.id,
+        });
+        if (conflict) {
+            return res.status(conflict.status).json(conflict.payload);
+        }
         
         const updatedPlanning = await Planning.findByIdAndUpdate(
             req.params.id,

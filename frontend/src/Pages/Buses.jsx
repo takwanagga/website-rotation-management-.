@@ -7,13 +7,11 @@ import { busService } from "../services/busService.js";
 
 const emptyForm = {
   immatriculation: "",
-  numero: "",
-  capacite: "",
-  type: "standard",
-  statut: "actif",
+  model: "",
+  statut: "disponible",
 };
 
-const STATUTS_CYCLE = ["actif", "inactif", "maintenance"];
+const STATUTS_CYCLE = ["disponible", "en service", "maintenance", "hors service", "retire"];
 
 export default function Buses() {
   const [buses, setBuses] = useState([]);
@@ -49,8 +47,7 @@ export default function Buses() {
     const result = buses.filter(
       (bus) =>
         bus.immatriculation?.toLowerCase().includes(q) ||
-        bus.numero?.toLowerCase().includes(q) ||
-        bus.type?.toLowerCase().includes(q)
+        bus.model?.toLowerCase().includes(q)
     );
     setFilteredBuses(result);
     setPage(1);
@@ -79,10 +76,8 @@ export default function Buses() {
       setEditingId(bus._id);
       setFormData({
         immatriculation: bus.immatriculation ?? "",
-        numero: bus.numero ?? "",
-        capacite: bus.capacite != null ? String(bus.capacite) : "",
-        type: bus.type || "standard",
-        statut: bus.statut || "actif",
+        model: bus.model ?? "",
+        statut: bus.statut || "disponible",
       });
     } else {
       setEditingId(null);
@@ -101,7 +96,6 @@ export default function Buses() {
     try {
       const payload = {
         ...formData,
-        capacite: formData.capacite === "" ? undefined : Number(formData.capacite),
       };
       if (editingId) {
         await busService.update(editingId, payload);
@@ -117,16 +111,6 @@ export default function Buses() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Êtes-vous sûr de vouloir supprimer ce bus ?")) return;
-    try {
-      await busService.remove(id);
-      toast.success("Bus supprimé avec succès");
-      fetchBuses();
-    } catch {
-      toast.error("Erreur lors de la suppression");
-    }
-  };
 
   return (
     <div className="flex">
@@ -173,7 +157,6 @@ export default function Buses() {
               totalCount={filteredBuses.length}
               onPageChange={setPage}
               onEdit={openForm}
-              onDelete={handleDelete}
               onToggleStatut={handleToggleStatut}
             />
           </div>
@@ -217,48 +200,17 @@ export default function Buses() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Numéro *
+                      Modèle *
                     </label>
                     <input
                       required
                       type="text"
-                      name="numero"
-                      value={formData.numero}
+                      name="model"
+                      value={formData.model}
                       onChange={handleInputChange}
                       className="w-full p-2 border rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
-                      placeholder="Ex: BUS-001"
+                      placeholder="Ex: Iveco Urbanway"
                     />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Capacité
-                    </label>
-                    <input
-                      type="number"
-                      name="capacite"
-                      min={1}
-                      max={200}
-                      value={formData.capacite}
-                      onChange={handleInputChange}
-                      className="w-full p-2 border rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
-                      placeholder="Nombre de places"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Type
-                    </label>
-                    <select
-                      name="type"
-                      value={formData.type}
-                      onChange={handleInputChange}
-                      className="w-full p-2 border rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
-                    >
-                      <option value="standard">Standard</option>
-                      <option value="articule">Articulé</option>
-                      <option value="minibus">Minibus</option>
-                      <option value="electrique">Électrique</option>
-                    </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -270,9 +222,11 @@ export default function Buses() {
                       onChange={handleInputChange}
                       className="w-full p-2 border rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
                     >
-                      <option value="actif">Actif</option>
-                      <option value="inactif">Inactif</option>
+                      <option value="disponible">Disponible</option>
+                      <option value="en service">En service</option>
                       <option value="maintenance">Maintenance</option>
+                      <option value="hors service">Hors service</option>
+                      <option value="retire">Retiré</option>
                     </select>
                   </div>
                 </form>

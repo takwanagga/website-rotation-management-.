@@ -20,7 +20,7 @@ export async function modifierLigne(req, res) {
         const{ libelle , debutDeLigne , finDeLigne , distance , status } = req.body;
         const updatedLigne = await Ligne.findByIdAndUpdate(
             req.params.id,{ libelle, debutDeLigne, finDeLigne, distance, status },
-            { returnDocument: 'after' }
+            { new: true}
         );
         if (!updatedLigne) return res.status(404).json({ error: "Ligne non trouvée" });
         return res.status(200).json(updatedLigne);
@@ -37,7 +37,7 @@ export async function setStatutLigne(req, res) {
         const updatedLigne = await Ligne.findByIdAndUpdate(
             req.params.id,
             { libelle , debutDeLigne , finDeLigne , distance , status } , 
-            { returnDocument: 'after' }
+            { new: true }
         );
         if (!updatedLigne) 
         return res.status(404).json({ error: "Ligne non trouvée" });
@@ -63,4 +63,5 @@ export default {
     modifierLigne,
     setStatutLigne,
     listerLigne
+    
 };

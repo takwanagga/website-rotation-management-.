@@ -1,23 +1,23 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import AdminSidebar from "../components/AdminSidebar.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
-import { X, Search, ChevronLeft, ChevronRight, Calendar as CalendarIcon, AlertCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
 import { employeeService } from "../services/employeeService.js";
 import { busService } from "../services/busService.js";
 import { ligneService } from "../services/ligneService.js";
+import { addPlanning, updatePlanning, deletePlanning, publishPlanningById } from "../lib/api.js";
 
 // Time slots for the day
 const HEURES = ["05:00-07:00", "07:00-09:00", "09:00-11:00", "11:00-13:00", "13:00-15:00", "15:00-17:00", "17:00-19:00", "19:00-21:00"];
 
-// Get week dates starting from today
-function getWeekDates(startDate) {
+function getCalendarDays(centerDate) {
   const dates = [];
-  const start = new Date(startDate);
-  start.setHours(0, 0, 0, 0);
-  for (let i = 0; i < 7; i++) {
-    const date = new Date(start);
-    date.setDate(start.getDate() + i);
+  const center = new Date(centerDate);
+  center.setHours(0, 0, 0, 0);
+  for (let i = -7; i <= 7; i++) {
+    const date = new Date(center);
+    date.setDate(center.getDate() + i);
     dates.push(date);
   }
   return dates;
@@ -27,28 +27,39 @@ function formatDateKey(date) {
   return date.toISOString().split("T")[0];
 }
 
-function formatDisplayDate(date) {
-  return date.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
-}
-
 function isSameDate(d1, d2) {
   return formatDateKey(d1) === formatDateKey(d2);
+}
+
+function parseHeureRange(heureRange) {
+  const [start, end] = heureRange.split("-");
+  return { heuredebut: start, heurefin: end };
+}
+
+function validateConflict({ assignments, dateKey, heure, ligneId, item, currentKey }) {
+  const duplicate = Object.entries(assignments).find(([key, value]) => {
+    if (key === currentKey) return false;
+    const [d, h, l] = key.split("__");
+    if (d !== dateKey || h !== heure || l === ligneId) return false;
+    if (item.type === "bus") return value.busId === item._id;
+    return value.employeeId === item._id;
+  });
+  return !duplicate;
 }
 
 export default function PlanningQuotidien() {
   const { user } = useAuth();
   const [dragging, setDragging] = useState(null);
-  const [currentWeekStart, setCurrentWeekStart] = useState(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return today;
-  });
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [assignments, setAssignments] = useState({});
   const [conflicts, setConflicts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiDone, setAiDone] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [savedPlanningMap, setSavedPlanningMap] = useState({});
+  const [deletedPlanningIds, setDeletedPlanningIds] = useState([]);
 
   // Data from database
   const [lignes, setLignes] = useState([]);
@@ -56,7 +67,7 @@ export default function PlanningQuotidien() {
   const [receveurs, setReceveurs] = useState([]);
   const [buses, setBuses] = useState([]);
 
-  const weekDates = useMemo(() => getWeekDates(currentWeekStart), [currentWeekStart]);
+  const calendarDays = useMemo(() => getCalendarDays(selectedDate), [selectedDate]);
 
   // Fetch data from database
   const fetchData = useCallback(async () => {
@@ -69,12 +80,12 @@ export default function PlanningQuotidien() {
       ]);
       
       setLignes(lignesData);
-      setBuses(busesData.filter(b => b.statut === "actif"));
+      setBuses(busesData.filter((b) => b.status === "disponible"));
       
       // Filter active employees by role
-      const activeEmployes = employesData.filter(e => e.statut === "actif");
-      setChauffeurs(activeEmployes.filter(e => e.role === "chauffeur"));
-      setReceveurs(activeEmployes.filter(e => e.role === "receveur"));
+      const activeEmployes = employesData.filter((e) => e.statut === "actif");
+      setChauffeurs(activeEmployes.filter((e) => e.role === "chauffeur"));
+      setReceveurs(activeEmployes.filter((e) => e.role === "receveur"));
     } catch {
       toast.error("Erreur lors du chargement des données");
     } finally {
@@ -141,15 +152,10 @@ export default function PlanningQuotidien() {
     if (!dragging) return;
 
     const dateKey = formatDateKey(date);
-    const key = `${dateKey}__${heure}__${ligne._id}`;
+    const roleType = dragging.role === "chauffeur" ? "driver" : "receveur";
+    const key = `${dateKey}__${heure}__${ligne._id}__${roleType}`;
 
-    // Check if employee is already assigned at this time on this date
-    const existingAssignments = Object.entries(assignments).filter(([k, v]) => {
-      const [d, h] = k.split("__");
-      return d === dateKey && h === heure && v.employeeId === dragging._id;
-    });
-
-    if (existingAssignments.length > 0) {
+    if (!validateConflict({ assignments, dateKey, heure, ligneId: ligne._id, item: dragging, currentKey: key })) {
       toast.error(`${dragging.nom} est déjà assigné(e) à cette heure sur une autre ligne`);
       setDragging(null);
       return;
@@ -159,7 +165,7 @@ export default function PlanningQuotidien() {
       ...assignments, 
       [key]: { 
         ...dragging, 
-        type: dragging.role === "chauffeur" ? "driver" : dragging.role === "receveur" ? "receveur" : "controller",
+        type: roleType,
         employeeId: dragging._id,
       } 
     };
@@ -176,6 +182,11 @@ export default function PlanningQuotidien() {
 
     const dateKey = formatDateKey(date);
     const key = `${dateKey}__${heure}__${ligne._id}__bus`;
+    if (!validateConflict({ assignments, dateKey, heure, ligneId: ligne._id, item: dragging, currentKey: key })) {
+      toast.error(`Le bus ${dragging.immatriculation} est déjà assigné à cette heure sur une autre ligne`);
+      setDragging(null);
+      return;
+    }
 
     const newAssignments = { 
       ...assignments, 
@@ -203,6 +214,14 @@ export default function PlanningQuotidien() {
       checkConflicts(next);
       return next;
     });
+    setSavedPlanningMap((prev) => {
+      const next = { ...prev };
+      if (next[key]) {
+        setDeletedPlanningIds((ids) => [...ids, next[key]]);
+        delete next[key];
+      }
+      return next;
+    });
   };
 
   const handleAI = () => {
@@ -221,18 +240,31 @@ export default function PlanningQuotidien() {
           // Auto-assign bus if not already assigned
           if (!assignments[busKey] && buses.length > 0) {
             const busIdx = (hi + li) % buses.length;
-            autoAssign[busKey] = { 
-              ...buses[busIdx], 
-              type: "bus",
-              busId: buses[busIdx]._id,
-            };
+            const candidateBus = buses[busIdx];
+            const combined = { ...assignments, ...autoAssign };
+            const busAllowed = validateConflict({
+              assignments: combined,
+              dateKey,
+              heure: h,
+              ligneId: ligne._id,
+              item: { ...candidateBus, type: "bus" },
+              currentKey: busKey,
+            });
+            if (busAllowed) {
+              autoAssign[busKey] = {
+                ...candidateBus,
+                type: "bus",
+                busId: candidateBus._id,
+              };
+            }
           }
 
           // Auto-assign driver if not already assigned
           if (!assignments[driverKey] && chauffeurs.length > 0) {
             const driverIdx = (hi + li) % chauffeurs.length;
             // Check if driver is already assigned at this time
-            const isDriverBusy = Object.entries(assignments).some(([k, v]) => {
+            const combined = { ...assignments, ...autoAssign };
+            const isDriverBusy = Object.entries(combined).some(([k, v]) => {
               const [d, hour] = k.split("__");
               return d === dateKey && hour === h && v.employeeId === chauffeurs[driverIdx]._id;
             });
@@ -249,7 +281,8 @@ export default function PlanningQuotidien() {
           if (!assignments[receveurKey] && receveurs.length > 0) {
             const receveurIdx = (hi + li) % receveurs.length;
             // Check if receveur is already assigned at this time
-            const isReceveurBusy = Object.entries(assignments).some(([k, v]) => {
+            const combined = { ...assignments, ...autoAssign };
+            const isReceveurBusy = Object.entries(combined).some(([k, v]) => {
               const [d, hour] = k.split("__");
               return d === dateKey && hour === h && v.employeeId === receveurs[receveurIdx]._id;
             });
@@ -273,23 +306,96 @@ export default function PlanningQuotidien() {
     }, 1800);
   };
 
-  const goToPreviousWeek = () => {
-    const newStart = new Date(currentWeekStart);
-    newStart.setDate(newStart.getDate() - 7);
-    setCurrentWeekStart(newStart);
+  const goToPreviousDay = () => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(newDate.getDate() - 1);
+    setSelectedDate(newDate);
   };
 
-  const goToNextWeek = () => {
-    const newStart = new Date(currentWeekStart);
-    newStart.setDate(newStart.getDate() + 7);
-    setCurrentWeekStart(newStart);
+  const goToNextDay = () => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(newDate.getDate() + 1);
+    setSelectedDate(newDate);
   };
 
   const goToToday = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    setCurrentWeekStart(today);
     setSelectedDate(today);
+  };
+
+  const handleDateChange = (e) => {
+    if (e.target.value) {
+      const parsedDate = new Date(e.target.value);
+      parsedDate.setHours(0, 0, 0, 0);
+      setSelectedDate(parsedDate);
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    try {
+      setSavingDraft(true);
+      const nextPlanningMap = { ...savedPlanningMap };
+
+      for (const id of deletedPlanningIds) {
+        await deletePlanning(id);
+      }
+
+      for (const [key, assignment] of Object.entries(assignments)) {
+        if (assignment.type === "bus") continue;
+        const [dateKey, heure, ligneId] = key.split("__");
+        const busKey = `${dateKey}__${heure}__${ligneId}__bus`;
+        const busAssignment = assignments[busKey];
+        if (!busAssignment?.busId) {
+          continue;
+        }
+        const { heuredebut, heurefin } = parseHeureRange(heure);
+        const payload = {
+          date: dateKey,
+          heuredebut,
+          heurefin,
+          ligne: ligneId,
+          bus: busAssignment.busId,
+          employe: assignment.employeeId,
+        };
+        if (nextPlanningMap[key]) {
+          const response = await updatePlanning(nextPlanningMap[key], payload);
+          nextPlanningMap[key] = response.data?._id || nextPlanningMap[key];
+        } else {
+          const response = await addPlanning(payload);
+          nextPlanningMap[key] = response.data?._id;
+        }
+      }
+
+      setSavedPlanningMap(nextPlanningMap);
+      setDeletedPlanningIds([]);
+      toast.success("Brouillon enregistré avec succès");
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Erreur lors de l'enregistrement du brouillon");
+    } finally {
+      setSavingDraft(false);
+    }
+  };
+
+  const handlePublish = async () => {
+    try {
+      setPublishing(true);
+      const selectedDateKey = formatDateKey(selectedDate);
+      const ids = Object.entries(savedPlanningMap)
+        .filter(([key]) => key.startsWith(`${selectedDateKey}__`))
+        .map(([, id]) => id)
+        .filter(Boolean);
+      if (ids.length === 0) {
+        toast.error("Aucun planning sauvegardé à publier pour cette date");
+        return;
+      }
+      await Promise.all(ids.map((id) => publishPlanningById(id, true)));
+      toast.success("Planning publié avec succès");
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Erreur lors de la publication");
+    } finally {
+      setPublishing(false);
+    }
   };
 
   // Get assignment for a specific slot
@@ -332,13 +438,19 @@ export default function PlanningQuotidien() {
           <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Planning Quotidien</h1>
           <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2 w-full md:w-auto">
             <div className="flex items-center gap-2">
-              <button onClick={goToPreviousWeek} className="p-2 hover:bg-gray-100 rounded-lg">
+              <button onClick={goToPreviousDay} className="p-2 hover:bg-gray-100 rounded-lg" title="Jour Précédent">
                 <ChevronLeft size={20} />
               </button>
+              <input
+                type="date"
+                value={formatDateKey(selectedDate)}
+                onChange={handleDateChange}
+                className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+              />
               <button onClick={goToToday} className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
                 Aujourd'hui
               </button>
-              <button onClick={goToNextWeek} className="p-2 hover:bg-gray-100 rounded-lg">
+              <button onClick={goToNextDay} className="p-2 hover:bg-gray-100 rounded-lg" title="Jour Suivant">
                 <ChevronRight size={20} />
               </button>
             </div>
@@ -393,34 +505,28 @@ export default function PlanningQuotidien() {
             </button>
           </div>
 
-          {/* Calendar Week Navigation */}
-          <div className="mb-6 bg-white rounded-lg border border-gray-200 p-4">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold text-gray-800 flex items-center gap-2">
-                <CalendarIcon size={20} />
-                Semaine du {currentWeekStart.toLocaleDateString("fr-FR")}
-              </h2>
-            </div>
-            <div className="grid grid-cols-7 gap-2">
-              {weekDates.map((date) => {
-                const isSelected = isSameDate(date, selectedDate);
-                const isToday = isSameDate(date, new Date());
+          {/* Day calendar */}
+          <div className="mb-6 bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+            <div className="flex items-center gap-2 overflow-x-auto">
+              {calendarDays.map((date) => {
+                const selected = isSameDate(date, selectedDate);
                 return (
                   <button
-                    key={date.toISOString()}
+                    key={formatDateKey(date)}
                     onClick={() => setSelectedDate(date)}
-                    className={`p-3 rounded-lg text-center transition ${
-                      isSelected 
-                        ? 'bg-blue-600 text-white' 
-                        : isToday 
-                          ? 'bg-blue-100 text-blue-700' 
-                          : 'bg-gray-50 hover:bg-gray-100'
+                    className={`min-w-24 px-3 py-2 rounded-lg border text-center transition ${
+                      selected
+                        ? "bg-blue-600 border-blue-600 text-white"
+                        : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
                     }`}
+                    title={date.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
                   >
-                    <div className="text-xs uppercase font-medium">
+                    <div className="text-xs uppercase tracking-wide">
                       {date.toLocaleDateString("fr-FR", { weekday: "short" })}
                     </div>
-                    <div className="text-lg font-bold">{date.getDate()}</div>
+                    <div className="text-sm font-semibold">
+                      {date.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" })}
+                    </div>
                   </button>
                 );
               })}
@@ -433,7 +539,7 @@ export default function PlanningQuotidien() {
             <div className="w-full lg:w-56 flex-shrink-0 bg-white rounded-lg border border-gray-200 p-4 shadow-sm overflow-y-auto max-h-96 lg:max-h-full">
               <div className="text-xs font-bold text-gray-500 tracking-widest mb-3">BUS ({buses.length})</div>
               {buses.length === 0 && (
-                <div className="text-xs text-gray-400 mb-3">Aucun bus actif</div>
+                <div className="text-xs text-gray-400 mb-3">Aucun bus disponible</div>
               )}
               {buses.map((b) => (
                 <div
@@ -444,7 +550,7 @@ export default function PlanningQuotidien() {
                 >
                   <div className="text-indigo-600 flex-shrink-0">🚌</div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-semibold truncate">{b.immatriculation}</div>
+                    <div className="text-sm font-semibold truncate">{b.matricule}</div>
                     <div className="text-xs text-gray-500 font-semibold">{b.type}</div>
                   </div>
                 </div>
@@ -562,7 +668,7 @@ export default function PlanningQuotidien() {
                                       }`}
                                     >
                                       <span className="truncate">
-                                        {assignment.type === "bus" ? assignment.immatriculation : `${assignment.nom} ${assignment.prenom}`}
+                                        {assignment.type === "bus" ? (assignment.matricule || assignment.immatriculation) : `${assignment.nom} ${assignment.prenom}`}
                                       </span>
                                       <button
                                         onClick={() => handleRemove(key)}
@@ -582,6 +688,25 @@ export default function PlanningQuotidien() {
                 </tbody>
               </table>
             </div>
+          </div>
+
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={handleSaveDraft}
+              disabled={savingDraft}
+              className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-60"
+            >
+              {savingDraft ? "Enregistrement..." : "Enregistrer brouillon"}
+            </button>
+            <button
+              type="button"
+              onClick={handlePublish}
+              disabled={publishing || savingDraft}
+              className="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-60"
+            >
+              {publishing ? "Publication..." : "Publier"}
+            </button>
           </div>
         </main>
       </div>
