@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Edit2, Trash2 } from "lucide-react";
+import { Edit2, Eye, Trash2 } from "lucide-react";
 
 function statusStyles(status) {
   switch (status) {
@@ -51,6 +51,7 @@ export default function EmployeeTable({
   perPage,
   totalCount,
   onPageChange,
+  onView,
   onEdit,
   onDelete,
   onToggleStatut,
@@ -121,6 +122,14 @@ export default function EmployeeTable({
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => onView?.(row)}
+                        className="p-2 text-indigo-600 hover:bg-indigo-100 rounded transition-colors"
+                        title="Voir"
+                      >
+                        <Eye size={18} />
+                      </button>
                       <button
                         type="button"
                         onClick={() => onEdit(row)}

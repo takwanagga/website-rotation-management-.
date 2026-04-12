@@ -7,6 +7,7 @@ const router = express.Router();
 router.post('/ajouter', planningControllers.ajouterPlanning);
 router.post('/modifier/:id', planningControllers.modifierPlanning);
 router.delete('/supprimer/:id', planningControllers.supprimerPlanning);
+router.get('/range', planningControllers.listerPlanningParDateRange);
 router.get('/:id', planningControllers.obtenirPlanningParId);
 router.post('/publier/:id', planningControllers.publierPlanning);
  

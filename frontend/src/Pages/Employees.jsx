@@ -29,6 +29,8 @@ export default function Employees() {
   const perPage = 10;
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [selectedEmploye, setSelectedEmploye] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState(emptyForm);
 
@@ -104,6 +106,11 @@ export default function Employees() {
   const closeForm = () => {
     setIsModalOpen(false);
     setEditingId(null);
+  };
+
+  const openViewModal = (employe) => {
+    setSelectedEmploye(employe);
+    setIsViewModalOpen(true);
   };
 
   const handleSubmit = async (e) => {
@@ -183,12 +190,37 @@ export default function Employees() {
               perPage={perPage}
               totalCount={filteredEmployes.length}
               onPageChange={setPage}
+              onView={openViewModal}
               onEdit={openForm}
               onDelete={handleDelete}
               onToggleStatut={handleToggleStatut}
             />
           </div>
         </div>
+
+        {isViewModalOpen && selectedEmploye && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-xl">
+              <div className="flex justify-between items-center p-6 border-b">
+                <h2 className="text-xl font-bold text-gray-800">Details employe</h2>
+                <button type="button" onClick={() => setIsViewModalOpen(false)} className="text-gray-500 hover:bg-gray-100 p-2 rounded-full transition-colors">
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                <p><span className="font-semibold">Nom:</span> {selectedEmploye.nom}</p>
+                <p><span className="font-semibold">Prenom:</span> {selectedEmploye.prenom}</p>
+                <p><span className="font-semibold">Mecano:</span> {selectedEmploye.mecano}</p>
+                <p><span className="font-semibold">Role:</span> {selectedEmploye.role}</p>
+                <p><span className="font-semibold">Statut:</span> {selectedEmploye.statut}</p>
+                <p><span className="font-semibold">Age:</span> {selectedEmploye.age ?? "-"}</p>
+                <p className="md:col-span-2"><span className="font-semibold">Email:</span> {selectedEmploye.email}</p>
+                <p className="md:col-span-2"><span className="font-semibold">Telephone:</span> {selectedEmploye.telephone || "-"}</p>
+                <p className="md:col-span-2"><span className="font-semibold">Localisation:</span> {selectedEmploye.localisation || "-"}</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">

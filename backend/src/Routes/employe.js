@@ -1,26 +1,28 @@
+// routes/employe.js
 import express from "express";
-import {
-  signupEmploye,
-  ajouterEmploye,
-  loginEmploye,
-  modifierEmploye,
-  supprimerEmploye,
-  listerEmploye,
-  forgotPassword,
-  getCurrentUser,
-} from "../Controllers/employeController.js";
-import { authenticate, authorize } from "../middleware/auth.js";
+import {employeController} from "../Controllers/employeController.js";
+import { authenticate, authorize, adminOnly, tousLesRoles } from "../middleware/auth.js";
 
 const router = express.Router();
 
-router.post("/signup", signupEmploye);
-router.post("/login", loginEmploye);
-router.post("/forgot-password", forgotPassword);
-router.get("/me", authenticate, getCurrentUser);
+// ── Routes publiques (sans connexion) ────────────────────────────────────────
+router.post("/signup",employeController.signupEmploye);
+router.post("/login",employeController.loginEmploye);
+router.post("/logout",employeController.logoutEmploye);
+router.post("/forgot-password", employeController.forgotPassword);
+
+// ── Routes protégées (connecté) ───────────────────────────────────────────────
+router.get("/me",     authenticate, employeController.getCurrentUser);
 router.get("/verify", authenticate, getCurrentUser);
-router.post("/ajouter", authenticate, authorize(["admin"]), ajouterEmploye);
-router.post("/modifier/:id", authenticate, authorize(["admin"]), modifierEmploye);
-router.get("/supprimer/:id", authenticate, authorize(["admin"]), supprimerEmploye);
-router.get("/lister", authenticate, listerEmploye);
+
+// ── Routes admin uniquement ───────────────────────────────────────────────────
+// ✅ Correction : authorize('admin') sans tableau imbriqué inutile
+// ✅ Correction : PUT pour modifier, DELETE pour supprimer
+router.post(  "/ajouter",        ...adminOnly, employeController.ajouterEmploye);
+router.put(   "/modifier/:id",   ...adminOnly, employeController.modifierEmploye);  // ✅ POST → PUT
+router.delete("/supprimer/:id",  ...adminOnly, employeController.supprimerEmploye); // ✅ GET → DELETE
+
+// ── Lister : tous les rôles connectés ────────────────────────────────────────
+router.get("/lister", ...tousLesRoles, employeController.listerEmploye);
 
 export default router;

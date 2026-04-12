@@ -1,37 +1,58 @@
 ﻿import jwt from 'jsonwebtoken';
+import Employe from '../models/employe.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
+const JWT_SECRET = process.env.JWT_SECRET;
 
-export const authenticate = (req, res, next) => {
+if (!JWT_SECRET) {
+  throw new Error("JWT_SECRET manquant dans les variables d'environnement.");
+}
+
+//  vérifie le token + cherche l'employé en DB 
+export const authenticate = async (req, res, next) => {
   try {
-    const token = req.header('Authorization')?.replace('Bearer ', '');
+    const token = req.cookies?.token;
 
     if (!token) {
       return res.status(401).json({ message: 'Jeton manquant, accès refusé.' });
     }
 
     const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded;
+
+    const employe = await Employe.findById(decoded.id).select('-MotDePasse');
+
+    if (!employe) {
+      return res.status(401).json({ message: 'Compte introuvable ou supprimé.' });
+    }
+    req.employe = employe;
     next();
+
   } catch (error) {
-    res.status(401).json({ message: 'Jeton invalide ou expiré.' });
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ message: 'Session expirée, reconnectez-vous.' });
+    }
+    return res.status(401).json({ message: 'Jeton invalide.' });
   }
 };
 
-/**
- * Accepte authorize("admin") ou authorize(["admin"]) — les rôles passés en tableau imbriqué sont aplatis.
- */
+//  vérifie le rôle après authenticate 
 export const authorize = (...roles) => {
   const allowed = roles.flat();
+
   return (req, res, next) => {
-    if (!req.user) {
+    if (!req.employe) {
       return res.status(401).json({ message: 'Non authentifié.' });
     }
 
-    if (allowed.length && !allowed.includes(req.user.role)) {
-      return res.status(403).json({ message: 'Accès refusé : droits insuffisants.' });
+    if (!allowed.includes(req.employe.role)) {
+      return res.status(403).json({
+        message: `Accès refusé. Rôle requis : ${allowed.join(' ou ')}.`
+      });
     }
 
     next();
   };
 };
+
+export const adminOnly     = [authenticate, authorize('admin')];
+export const chauffeurReceveurOnly = [authenticate, authorize('chauffeur', 'receveur')];
+export const tousLesRoles  = [authenticate, authorize('admin', 'chauffeur', 'receveur')];

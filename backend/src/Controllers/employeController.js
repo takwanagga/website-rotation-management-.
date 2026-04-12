@@ -1,7 +1,12 @@
 import jwt from "jsonwebtoken";
 import Employe from "../models/employe.js";
 
-const JWT_SECRET = process.env.JWT_SECRET || "dev-secret";
+const JWT_SECRET = process.env.JWT_SECRET;
+
+//  Bloque au démarrage si JWT_SECRET manque — pas de fallback dangereux
+if (!JWT_SECRET) {
+  throw new Error("JWT_SECRET manquant dans les variables d'environnement.");
+}
 
 function getErrorMessage(error) {
   if (error?.name === "ValidationError") {
@@ -15,18 +20,27 @@ function getErrorMessage(error) {
   return error?.message || "Une erreur est survenue.";
 }
 
-function buildToken(employe) {
-  return jwt.sign(
+// Créer et poser le token dans un cookie httpOnly 
+function setTokenCookie(res, employe) {
+  const token = jwt.sign(
     { id: employe._id.toString(), role: employe.role, email: employe.email },
     JWT_SECRET,
     { expiresIn: "8h" }
   );
-    }
 
+  res.cookie("token", token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production", // HTTPS en prod uniquement
+    sameSite: "strict",
+    maxAge: 8 * 60 * 60 * 1000, 
+  });
+}
+// creation de compte
 export async function signupEmploye(req, res) {
-    try {
+  try {
     const { nom, prenom, mecano, localisation, email, role, telephone, MotDePasse, age } =
       req.body;
+
     const employe = await Employe.create({
       nom,
       prenom,
@@ -38,139 +52,154 @@ export async function signupEmploye(req, res) {
       MotDePasse,
       age,
     });
-    const token = buildToken(employe);
-    return res.status(201).json({ token, employe });
-    } catch (error) {
-    return res.status(400).json({ error: getErrorMessage(error) });
-    }
-}
 
-export async function loginEmploye(req, res) {
-    try {
-        const { email, password } = req.body;
-    if (!email || !password) {
-      return res.status(400).json({ error: "Email et mot de passe requis." });
-    }
-    const employe = await Employe.findOne({ email: String(email).toLowerCase() });
-        if (!employe) {
-      return res.status(401).json({ error: "Identifiants invalides." });
-        }
-    const isMatch = await employe.comparePassword(password);
-    if (!isMatch) {
-      return res.status(401).json({ error: "Identifiants invalides." });
-        }
-    const token = buildToken(employe);
-    return res.status(200).json({ token, employe });
-    } catch (error) {
-    return res.status(500).json({ error: getErrorMessage(error) });
-    }
-}
+    setTokenCookie(res, employe);
 
-export async function getCurrentUser(req, res) {
-  try {
-    const employe = await Employe.findById(req.user.id).select("-MotDePasse");
-    if (!employe) {
-      return res.status(404).json({ success: false, message: "Utilisateur introuvable." });
-    }
-    const plain = employe.toObject();
-    return res.status(200).json({
-      success: true,
-      user: {
-        ...plain,
-        id: plain._id?.toString(),
-      },
-    });
+    return res.status(201).json({ message: "Compte créé avec succès.", employe });
   } catch (error) {
-    return res.status(500).json({ success: false, error: getErrorMessage(error) });
+    return res.status(400).json({ error: getErrorMessage(error) });
   }
 }
 
+// connection 
+export async function loginEmploye(req, res) {
+  try {
+    const { email, MotDePasse } = req.body;
+
+    if (!email || !MotDePasse) {
+      return res.status(400).json({ error: "Email et mot de passe requis." });
+    }
+
+    const employe = await Employe.findOne({ email: String(email).toLowerCase() }).select("+MotDePasse");
+
+    if (!employe) {
+      return res.status(401).json({ error: "Identifiants invalides." });
+    }
+
+    const isMatch = await employe.comparePassword(MotDePasse);
+    if (!isMatch) {
+      return res.status(401).json({ error: "Identifiants invalides." });
+    }
+
+    setTokenCookie(res, employe);
+
+    return res.status(200).json({ message: "Connexion réussie.", employe });
+  } catch (error) {
+    return res.status(500).json({ error: getErrorMessage(error) });
+  }
+}
+
+// deconnection
+export async function logoutEmploye(req, res) {
+  res.clearCookie("token");
+  return res.status(200).json({ message: "Déconnexion réussie." });
+}
+
+// profil connecté
+export async function getCurrentUser(req, res) {
+  try {
+    const employe = await Employe.findById(req.employe._id);
+
+    if (!employe) {
+      return res.status(404).json({ message: "Employé introuvable." });
+    }
+
+    return res.status(200).json({ employe });
+  } catch (error) {
+    return res.status(500).json({ error: getErrorMessage(error) });
+  }
+}
+
+// ajouter un employé (admin uniquement) 
 export async function ajouterEmploye(req, res) {
   return signupEmploye(req, res);
 }
 
+//modifier un employé
 export async function modifierEmploye(req, res) {
-    try {  
+  try {
     const { MotDePasse, statut, ...rest } = req.body;
 
-    const updatedEmploye = await Employe.findById(req.params.id); // ← corrigé
-    if (!updatedEmploye) {
-        return res.status(404).json({ error: "Employé non trouvé" });
+    const employe = await Employe.findById(req.params.id);
+    if (!employe) {
+      return res.status(404).json({ error: "Employé non trouvé." });
     }
 
-    // Appliquer les champs classiques
-    Object.assign(updatedEmploye, rest);
+    Object.assign(employe, rest);
 
-    // Appliquer le statut explicitement
     if (statut !== undefined) {
-      updatedEmploye.statut = statut; // ← ajouté
+      employe.statut = statut;
     }
 
-    // Appliquer le mot de passe seulement s'il est fourni
     if (MotDePasse) {
-      updatedEmploye.MotDePasse = MotDePasse;
+      employe.MotDePasse = MotDePasse;
     }
 
-    await updatedEmploye.save();
-    return res.status(200).json({
-      message: "Employé modifié avec succès",
-      employe: updatedEmploye,
-    });
-    } catch (error) {
+    await employe.save();
+
+    return res.status(200).json({ message: "Employé modifié avec succès.", employe });
+  } catch (error) {
     return res.status(400).json({ error: getErrorMessage(error) });
-    }
+  }
 }
 
+//supprimer un employé
 export async function supprimerEmploye(req, res) {
-    try {
-        const deletedEmploye = await Employe.findByIdAndDelete(req.params.id);
-    if (!deletedEmploye) {
-         return res.status(404).json({ error: "Employé non trouvé" });
+  try {
+    const employe = await Employe.findByIdAndDelete(req.params.id);
+    if (!employe) {
+      return res.status(404).json({ error: "Employé non trouvé." });
     }
-    return res.status(200).json({ message: "Employé supprimé avec succès", employe: deletedEmploye });
-    } catch (error) {
+    return res.status(200).json({ message: "Employé supprimé avec succès.", employe });
+  } catch (error) {
     return res.status(500).json({ error: getErrorMessage(error) });
-    }
+  }
 }
 
+// Lister tous les employés (admin, chauffeur, receveur)
 export async function listerEmploye(req, res) {
-    try {
+  try {
     const employes = await Employe.find().sort({ createdAt: -1 });
     return res.status(200).json(employes);
-    } catch (error) {
+  } catch (error) {
     return res.status(500).json({ error: getErrorMessage(error) });
-    }
+  }
 }
 
+// mot de passe oublié 
 export async function forgotPassword(req, res) {
-    try {
-        const { email } = req.body;
+  try {
+    const { email } = req.body;
     if (!email) {
-      return res.status(400).json({ error: "Email required" });
+      return res.status(400).json({ error: "Email requis." });
     }
+
     const employe = await Employe.findOne({ email: String(email).toLowerCase() });
-        if (!employe) {
-      return res.status(200).json({ message: "If that email exists, reset instructions were sent." });
-        }
-        const resetToken = jwt.sign(
+
+    if (!employe) {
+      return res.status(200).json({ message: "Si cet email existe, un lien de réinitialisation a été envoyé." });
+    }
+
+    const resetToken = jwt.sign(
       { id: employe._id.toString(), email: employe.email, type: "reset" },
       JWT_SECRET,
       { expiresIn: "1h" }
-        );
-    return res.status(200).json({ message: "Reset token generated", resetToken });
-    } catch (error) {
+    );
+
+    return res.status(200).json({ message: "Lien de réinitialisation généré." });
+  } catch (error) {
     return res.status(500).json({ error: getErrorMessage(error) });
-        }
+  }
 }
 
-
 export default {
-    signupEmploye,
-    loginEmploye,
+  signupEmploye,
+  loginEmploye,
+  logoutEmploye,
   getCurrentUser,
   ajouterEmploye,
-    modifierEmploye,
-    supprimerEmploye,
-    listerEmploye,
-    forgotPassword,
+  modifierEmploye,
+  supprimerEmploye,
+  listerEmploye,
+  forgotPassword,
 };

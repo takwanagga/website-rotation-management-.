@@ -227,6 +227,32 @@ export async function listerPlanningParBus(req, res) {
     }
 }
 
+export async function listerPlanningParDateRange(req, res) {
+    try {
+        const { start, end } = req.query;
+        if (!start || !end) {
+            return res.status(400).json({ message: "Les parametres start et end sont obligatoires" });
+        }
+
+        const startDate = new Date(start);
+        const endDate = new Date(end);
+        endDate.setHours(23, 59, 59, 999);
+
+        const planning = await Planning.find({
+            date: { $gte: startDate, $lte: endDate }
+        })
+            .populate('ligne')
+            .populate('bus')
+            .populate('employe')
+            .sort({ date: 1, heuredebut: 1 });
+
+        res.status(200).json(planning);
+    } catch (error) {
+        console.error("Error in listerPlanningParDateRange controller", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
+
 export default {
     ajouterPlanning,
     modifierPlanning,
@@ -235,5 +261,6 @@ export default {
     publierPlanning,
     listerPlanningParEmploye,
     listerPlanningParLigne,
-    listerPlanningParBus
+    listerPlanningParBus,
+    listerPlanningParDateRange
 };

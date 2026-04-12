@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Edit2, Trash2 } from "lucide-react";
+import { Edit2, Eye } from "lucide-react";
 
 function statusStyles(status) {
   switch (status) {
@@ -42,6 +42,7 @@ export default function BusTable({
   perPage,
   totalCount,
   onPageChange,
+  onView,
   onEdit,
   onToggleStatut,
 }) {
@@ -101,6 +102,14 @@ export default function BusTable({
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => onView?.(row)}
+                        className="p-2 text-indigo-600 hover:bg-indigo-100 rounded transition-colors"
+                        title="Voir"
+                      >
+                        <Eye size={18} />
+                      </button>
                       <button
                         type="button"
                         onClick={() => onEdit(row)}

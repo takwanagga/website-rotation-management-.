@@ -76,3 +76,6 @@ export const listPlanningByLine = (ligneId) =>
 
 export const listPlanningByBus = (busId) =>
   axiosInstance.get(`/planning/bus/${busId}`);
+
+export const listPlanningByDateRange = (start, end) =>
+  axiosInstance.get(`/planning/range`, { params: { start, end } });

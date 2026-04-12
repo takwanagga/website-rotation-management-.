@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Edit2, Trash2 } from "lucide-react";
+import { Edit2, Eye } from "lucide-react";
 
 function statusStyles(status) {
   switch (status) {
@@ -30,6 +30,7 @@ export default function LigneTable({
   perPage,
   totalCount,
   onPageChange,
+  onView,
   onEdit,
   onDelete,
   onToggleStatut,
@@ -96,19 +97,19 @@ export default function LigneTable({
                     <div className="flex gap-2">
                       <button
                         type="button"
+                        onClick={() => onView?.(row)}
+                        className="p-2 text-indigo-600 hover:bg-indigo-100 rounded transition-colors"
+                        title="Voir"
+                      >
+                        <Eye size={18} />
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => onEdit(row)}
                         className="p-2 text-blue-600 hover:bg-blue-100 rounded transition-colors"
                         title="Modifier"
                       >
                         <Edit2 size={18} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onDelete(row._id)}
-                        className="p-2 text-red-600 hover:bg-red-100 rounded transition-colors"
-                        title="Supprimer"
-                      >
-                        <Trash2 size={18} />
                       </button>
                     </div>
                   </td>

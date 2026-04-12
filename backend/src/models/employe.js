@@ -24,7 +24,6 @@ const employeSchema = new mongoose.Schema({
         trim: true,
         minlength: 3,
         maxlength: 50,
-        
     },
     localisation: {
         type: String,
@@ -43,32 +42,26 @@ const employeSchema = new mongoose.Schema({
         }
     },
     role: { 
-        type: String, 
-        enum: ['chauffeur', 'receveur','admin'], 
+        type: String,
+        enum: ['chauffeur', 'receveur', 'admin'], 
         default: 'chauffeur' 
     },
     telephone: { 
         type: String,
         trim: true,
-        default: '', // ou laisser vide, mais assure la présence du champ
+        default: '',
         validate: {
             validator: function(v) {
-                // Accepte une chaîne vide ou exactement 8 chiffres
                 return v === '' || /^\d{8}$/.test(v);
             },
-            message: props => `Le numéro de téléphone doit contenir exactement 8 chiffres.`
+            message: 'Le numéro de téléphone doit contenir exactement 8 chiffres.'
         }
     },
     MotDePasse: {
         type: String,
         required: true,
-        validate: {
-            // Minimum 8 caractères, 1 majuscule, 1 minuscule, 1 chiffre, 1 caractère spécial
-            validator: function(v) {
-                return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/.test(v);
-            },
-            message: 'Le mot de passe doit contenir au moins 8 caractères, dont une majuscule, une minuscule, un chiffre et un caractère spécial.'
-        }
+        
+        select: false,//  jamais renvoyé par défaut dans les requêtes
     },
     statut: {
         type: String,
@@ -80,31 +73,36 @@ const employeSchema = new mongoose.Schema({
         min: 18,
         max: 65
     }
-}, { timestamps: true })
+}, { timestamps: true });
 
 
-// 🔒 Retirer le mot de passe des réponses JSON
+//  Hacher mot de passe saisi/modifié
+employeSchema.pre('save', async function() {
+    if (!this.isModified('MotDePasse')) return;
+
+    // Validation manuelle pour s'assurer que le mot de passe est fort
+    const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
+    if (!regex.test(this.MotDePasse)) {
+        throw new Error(
+            'Le mot de passe doit contenir au moins 8 caractères, ' +
+            'une majuscule, une minuscule, un chiffre et un caractère spécial.'
+        );
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    this.MotDePasse = await bcrypt.hash(this.MotDePasse, salt);
+});
+
+// Comparer le mot de passe saisi avec le hash
+employeSchema.methods.comparePassword = async function(motDePasseCandidat) {
+    return bcrypt.compare(motDePasseCandidat, this.MotDePasse);
+};
+
+//  Cacher le mot de passe dans toutes les réponses JSON
 employeSchema.methods.toJSON = function() {
     const obj = this.toObject();
     delete obj.MotDePasse;
     return obj;
 };
-
-// 🔐 Comparer un mot de passe candidat avec le hash stocké
-employeSchema.methods.comparePassword = async function(candidatePassword) {
-    return bcrypt.compare(candidatePassword, this.MotDePasse);
-};
-
-// ✍️ Hacher le mot de passe avant la sauvegarde
-// Hash password before save if modified
-employeSchema.pre('save', async function() {
-    if (!this.isModified('MotDePasse')) return;
-    
-    // Plus besoin de "next", la fonction async gère les erreurs et la suite automatiquement
-    const salt = await bcrypt.genSalt(10);
-    this.MotDePasse = await bcrypt.hash(this.MotDePasse, salt);
-});
-
 const Employe = mongoose.model('Employe', employeSchema);
-
 export default Employe;

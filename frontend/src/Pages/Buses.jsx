@@ -22,6 +22,8 @@ export default function Buses() {
   const perPage = 10;
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [selectedBus, setSelectedBus] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState(emptyForm);
 
@@ -91,6 +93,11 @@ export default function Buses() {
     setEditingId(null);
   };
 
+  const openViewModal = (bus) => {
+    setSelectedBus(bus);
+    setIsViewModalOpen(true);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -156,11 +163,30 @@ export default function Buses() {
               perPage={perPage}
               totalCount={filteredBuses.length}
               onPageChange={setPage}
+              onView={openViewModal}
               onEdit={openForm}
               onToggleStatut={handleToggleStatut}
             />
           </div>
         </div>
+
+        {isViewModalOpen && selectedBus && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-xl">
+              <div className="flex justify-between items-center p-6 border-b">
+                <h2 className="text-xl font-bold text-gray-800">Details bus</h2>
+                <button type="button" onClick={() => setIsViewModalOpen(false)} className="text-gray-500 hover:bg-gray-100 p-2 rounded-full transition-colors">
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                <p><span className="font-semibold">Immatriculation:</span> {selectedBus.immatriculation}</p>
+                <p><span className="font-semibold">Modele:</span> {selectedBus.model || "-"}</p>
+                <p className="md:col-span-2"><span className="font-semibold">Statut:</span> {selectedBus.statut}</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">

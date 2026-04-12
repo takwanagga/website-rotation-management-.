@@ -8,6 +8,7 @@ import Employees from "../Pages/Employees.jsx";
 import Buses from "../Pages/Buses.jsx";
 import Lignes from "../Pages/Lignes.jsx";
 import Settings from "../Pages/Settings.jsx";
+import AdminProfile from "../Pages/AdminProfile.jsx";
 import Unauthorized from "../Pages/Unauthorized.jsx";
 import PrivateRoutes from "./PrivateRoutes.jsx";
 import RoleBaseRoutes from "./RoleBaseRoutes.jsx";
@@ -58,6 +59,14 @@ export default function AppRoutes() {
         element={
           <AdminLayout>
             <Lignes />
+          </AdminLayout>
+        }
+      />
+      <Route
+        path="/admin-profile"
+        element={
+          <AdminLayout>
+            <AdminProfile />
           </AdminLayout>
         }
       />
