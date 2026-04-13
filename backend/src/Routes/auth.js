@@ -11,6 +11,7 @@ router.post("/login", authController.loginEmploye);
 router.post("/logout", authController.logoutEmploye);
 router.post("/forgot-password", authController.forgotPassword);
 
+router.get("/verify", authController.verifyToken);
 // Routes protégées (connecté)
 router.get("/profile", authenticate, authController.getProfile);
 router.put("/profile", authenticate, authController.updateProfile);

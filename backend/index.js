@@ -2,6 +2,7 @@ import express from 'express'
 import mongoose from 'mongoose';
 import 'dotenv/config'
 import cors from 'cors'
+import cookieParser from 'cookie-parser';
 import errorHandler from './src/Middleware/errorHandler.js';
 
 const app = express();
@@ -22,6 +23,7 @@ app.use(express.json()); // cette middleware JSON : req.body
 //next();
 //})
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 import planningRoutes from './src/Routes/planning.js'
 import notificationRoutes from './src/Routes/notification.js';
@@ -29,7 +31,6 @@ import employeRoutes from './src/Routes/employe.js';
 import authRoutes from './src/Routes/auth.js';
 import busRoutes from './src/Routes/bus.js';
 import ligneRoutes from './src/Routes/ligne.js';
-import cookieParser from 'cookie-parser';
 //import aiRoutes from './src/Routes/ai.js';
 
 
@@ -52,7 +53,6 @@ db.on('error', console.error.bind(console, 'connection error'));
 db.once('open', function () {
   console.log("connected to database");
 })
-app.use(cookieParser())
 app.use(errorHandler);
 //start server
 app.listen(process.env.PORT, () => {

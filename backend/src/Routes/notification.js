@@ -1,43 +1,23 @@
-import mongoose from "mongoose";
- 
-const NotificationSchema = new mongoose.Schema({
-    message: {
-        type: String,
-        required: true
-    },
-    type: {
-        type: String,
-        required: true
-    },
-    temps: {
-        type: Date,
-        default: Date.now
-    },
-    vue: {
-        type: Boolean,
-        default: false
-    },
-    supprime: {
-        type: Boolean,
-        default: false
-    },
-    destinataire: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Employe',
-        required: true
-    }
-}, {
-    timestamps: true
-});
- 
-NotificationSchema.methods.Estvue = function() {
-    return this.vue;
-};
- 
-NotificationSchema.methods.Estsupprimer = function() {
-    return this.supprime;
-};
- 
-const Notification = mongoose.model('Notification', NotificationSchema);
- 
-export default Notification;
+import express from 'express';
+import notificationControllers from '../Controllers/notificationControllers.js';
+
+const router = express.Router();
+
+// ── CRUD ──────────────────────────────────────────────────────────────────────
+router.post('/ajouter', notificationControllers.ajouterNotification);
+router.delete('/supprimer/:id', notificationControllers.supprimerNotification);
+
+// ── Statut ────────────────────────────────────────────────────────────────────
+router.post('/vue/:id', notificationControllers.marquerVue);
+router.get('/vue/:id/statut', notificationControllers.verifierSiVue);
+router.post('/supprime/:id', notificationControllers.marquerSupprime);
+router.get('/supprime/:id/statut', notificationControllers.verifierSiSupprime);
+
+// ── Lister ────────────────────────────────────────────────────────────────────
+router.get('/destinataire/:destinataireId', notificationControllers.listerNotificationsParDestinataire);
+router.get('/nonvues/:destinataireId', notificationControllers.listerNotificationsNonVues);
+
+// ── Par ID (last to avoid shadowing named routes) ──────────────────────────────
+router.get('/:id', notificationControllers.obtenirNotificationParId);
+
+export default router;

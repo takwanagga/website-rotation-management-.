@@ -3,7 +3,6 @@ import Employe from "../models/employe.js";
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
-//  Bloque au démarrage si JWT_SECRET manque — pas de fallback dangereux
 if (!JWT_SECRET) {
   throw new Error("JWT_SECRET manquant dans les variables d'environnement.");
 }
@@ -34,6 +33,8 @@ function setTokenCookie(res, employe) {
     sameSite: "strict",
     maxAge: 8 * 60 * 60 * 1000,
   });
+
+  return token;
 }
 
 // creation de compte
@@ -54,9 +55,9 @@ export async function signupEmploye(req, res) {
       age,
     });
 
-    setTokenCookie(res, employe);
+    const token = setTokenCookie(res, employe);
 
-    return res.status(201).json({ message: "Compte créé avec succès.", employe });
+    return res.status(201).json({ message: "Compte créé avec succès.", employe, token });
   } catch (error) {
     return res.status(400).json({ error: getErrorMessage(error) });
   }
@@ -82,9 +83,9 @@ export async function loginEmploye(req, res) {
       return res.status(401).json({ error: "Identifiants invalides." });
     }
 
-    setTokenCookie(res, employe);
+    const token = setTokenCookie(res, employe);
 
-    return res.status(200).json({ message: "Connexion réussie.", employe });
+    return res.status(200).json({ message: "Connexion réussie.", employe, token });
   } catch (error) {
     return res.status(500).json({ error: getErrorMessage(error) });
   }
@@ -121,7 +122,7 @@ export async function updateProfile(req, res) {
     }
 
     // Champs modifiables par l'employé lui-même
-    const champsAutorisés = ["nom", "prenom", "telephone", "localisation", "age"];
+    const champsAutorisés = ["nom", "prenom", "email", "telephone", "localisation", "age"];
 
     for (const champ of champsAutorisés) {
       if (req.body[champ] !== undefined) {
@@ -129,7 +130,7 @@ export async function updateProfile(req, res) {
       }
     }
 
-    // Changement de mot de passe (optionnel)
+    // Changement de mot de passe 
     if (req.body.MotDePasse) {
       employe.MotDePasse = req.body.MotDePasse;
     }
@@ -141,7 +142,31 @@ export async function updateProfile(req, res) {
     return res.status(400).json({ error: getErrorMessage(error) });
   }
 }
+export async function verifyToken(req, res) {
+  try {
+    const token =
+      req.cookies?.token ||
+      req.headers.authorization?.split(" ")[1];
 
+    if (!token) {
+      return res.status(401).json({ success: false, error: "Jeton manquant." });
+    }
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+
+    const employe = await Employe.findById(decoded.id);
+    if (!employe) {
+      return res.status(401).json({ success: false, error: "Compte introuvable." });
+    }
+
+    return res.status(200).json({ success: true, user: employe });
+  } catch (error) {
+    if (error.name === "TokenExpiredError") {
+      return res.status(401).json({ success: false, error: "Session expirée." });
+    }
+    return res.status(401).json({ success: false, error: "Jeton invalide." });
+  }
+}
 // mot de passe oublié 
 export async function forgotPassword(req, res) {
   try {
@@ -156,11 +181,7 @@ export async function forgotPassword(req, res) {
       return res.status(200).json({ message: "Si cet email existe, un lien de réinitialisation a été envoyé." });
     }
 
-    const resetToken = jwt.sign(
-      { id: employe._id.toString(), email: employe.email, type: "reset" },
-      JWT_SECRET,
-      { expiresIn: "1h" }
-    );
+
 
     return res.status(200).json({ message: "Lien de réinitialisation généré." });
   } catch (error) {
@@ -174,6 +195,7 @@ export const authController = {
   logoutEmploye,
   getProfile,
   updateProfile,
+  verifyToken,
   forgotPassword,
 };
 

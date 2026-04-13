@@ -2,7 +2,7 @@ import axiosInstance from "../api/axios";
 
 // Auth APIs
 export const loginEmployee = (email, password) =>
-  axiosInstance.post("/auth/login", { email, password });
+  axiosInstance.post("/auth/login", { email, MotDePasse: password });
 
 export const signupEmployee = (data) =>
   axiosInstance.post("/auth/signup", data);
