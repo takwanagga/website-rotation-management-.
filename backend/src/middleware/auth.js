@@ -10,7 +10,7 @@ if (!JWT_SECRET) {
 //  vérifie le token + cherche l'employé en DB 
 export const authenticate = async (req, res, next) => {
   try {
-    const token = req.cookies?.token;
+    const token = req.cookies?.token || req.headers.authorization?.split(' ')[1];
 
     if (!token) {
       return res.status(401).json({ message: 'Jeton manquant, accès refusé.' });
@@ -53,6 +53,6 @@ export const authorize = (...roles) => {
   };
 };
 
-export const adminOnly     = [authenticate, authorize('admin')];
+export const adminOnly = [authenticate, authorize('admin')];
 export const chauffeurReceveurOnly = [authenticate, authorize('chauffeur', 'receveur')];
-export const tousLesRoles  = [authenticate, authorize('admin', 'chauffeur', 'receveur')];
+export const tousLesRoles = [authenticate, authorize('admin', 'chauffeur', 'receveur')];

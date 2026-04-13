@@ -1,17 +1,17 @@
-﻿import axiosInstance from "../api/axios";
+import axiosInstance from "../api/axios";
 
-// Employee/Auth APIs
+// Auth APIs
 export const loginEmployee = (email, password) =>
-  axiosInstance.post("/employe/login", { email, password });
+  axiosInstance.post("/auth/login", { email, password });
 
 export const signupEmployee = (data) =>
-  axiosInstance.post("/employe/signup", data);
+  axiosInstance.post("/auth/signup", data);
 
 export const getCurrentUser = () =>
-  axiosInstance.get("/employe/me");
+  axiosInstance.get("/auth/me");
 
 export const verifyUser = () =>
-  axiosInstance.get("/employe/verify");
+  axiosInstance.get("/auth/verify");
 
 // Bus APIs
 export const listBuses = () =>
