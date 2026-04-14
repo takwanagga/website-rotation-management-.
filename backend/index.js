@@ -31,7 +31,7 @@ import employeRoutes from './src/Routes/employe.js';
 import authRoutes from './src/Routes/auth.js';
 import busRoutes from './src/Routes/bus.js';
 import ligneRoutes from './src/Routes/ligne.js';
-//import aiRoutes from './src/Routes/ai.js';
+import aiRoutes from './src/Routes/ai.js';
 
 
 //routes
@@ -39,7 +39,7 @@ app.use('/notification', notificationRoutes);
 app.use('/auth', authRoutes);
 app.use('/employe', employeRoutes);
 app.use('/planning', planningRoutes)
-//app.use('/ai', aiRoutes);
+app.use('/ai', aiRoutes);
 app.use('/bus', busRoutes);
 app.use('/ligne', ligneRoutes);
 
