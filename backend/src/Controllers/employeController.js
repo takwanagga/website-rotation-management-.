@@ -41,7 +41,7 @@ export async function modifierEmploye(req, res) {
   try {
     const { MotDePasse, statut, ...rest } = req.body;
 
-    const employe = await Employe.findById(req.params.id);
+    const employe = await Employe.findById(req.params.id).select('+MotDePasse');
     if (!employe) {
       return res.status(404).json({ error: "Employé non trouvé." });
     }
@@ -80,7 +80,24 @@ export async function supprimerEmploye(req, res) {
 // Lister tous les employés (admin, chauffeur, receveur)
 export async function listerEmploye(req, res) {
   try {
-    const employes = await Employe.find().sort({ createdAt: -1 });
+    let employes = await Employe.find().sort({ createdAt: -1 });
+    const now = new Date();
+    let updated = false;
+
+    for (let emp of employes) {
+      if (emp.statut === "en congé" && emp.congeFin && new Date(emp.congeFin) < now) {
+        emp.statut = "actif";
+        emp.congeDebut = undefined;
+        emp.congeFin = undefined;
+        await emp.save();
+        updated = true;
+      }
+    }
+
+    if (updated) {
+      employes = await Employe.find().sort({ createdAt: -1 });
+    }
+
     return res.status(200).json(employes);
   } catch (error) {
     return res.status(500).json({ error: getErrorMessage(error) });

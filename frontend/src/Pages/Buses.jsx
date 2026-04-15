@@ -8,10 +8,8 @@ import { busService } from "../services/busService.js";
 const emptyForm = {
   immatriculation: "",
   model: "",
-  statut: "disponible",
+  statut: "actif",
 };
-
-const STATUTS_CYCLE = ["disponible", "en service", "maintenance", "hors service", "retire"];
 
 export default function Buses() {
   const [buses, setBuses] = useState([]);
@@ -60,26 +58,13 @@ export default function Buses() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleToggleStatut = async (bus) => {
-    let i = STATUTS_CYCLE.indexOf(bus.statut || "actif");
-    if (i < 0) i = 0;
-    const next = STATUTS_CYCLE[(i + 1) % STATUTS_CYCLE.length];
-    try {
-      await busService.setStatut(bus._id, next);
-      toast.success(`Statut changé en : ${next}`);
-      fetchBuses();
-    } catch {
-      toast.error("Erreur lors du changement de statut");
-    }
-  };
-
   const openForm = (bus = null) => {
     if (bus) {
       setEditingId(bus._id);
       setFormData({
         immatriculation: bus.immatriculation ?? "",
         model: bus.model ?? "",
-        statut: bus.statut || "disponible",
+        statut: bus.statut || bus.status || "actif",
       });
     } else {
       setEditingId(null);
@@ -165,7 +150,6 @@ export default function Buses() {
               onPageChange={setPage}
               onView={openViewModal}
               onEdit={openForm}
-              onToggleStatut={handleToggleStatut}
             />
           </div>
         </div>
@@ -182,7 +166,7 @@ export default function Buses() {
               <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                 <p><span className="font-semibold">Immatriculation:</span> {selectedBus.immatriculation}</p>
                 <p><span className="font-semibold">Modele:</span> {selectedBus.model || "-"}</p>
-                <p className="md:col-span-2"><span className="font-semibold">Statut:</span> {selectedBus.statut}</p>
+                <p className="md:col-span-2"><span className="font-semibold">Statut:</span> {selectedBus.statut || selectedBus.status}</p>
               </div>
             </div>
           </div>
@@ -248,11 +232,9 @@ export default function Buses() {
                       onChange={handleInputChange}
                       className="w-full p-2 border rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
                     >
-                      <option value="disponible">Disponible</option>
-                      <option value="en service">En service</option>
-                      <option value="maintenance">Maintenance</option>
-                      <option value="hors service">Hors service</option>
-                      <option value="retire">Retiré</option>
+                      <option value="actif">Actif</option>
+                      <option value="en maintenance">En maintenance</option>
+                      <option value="retiré">Retiré</option>
                     </select>
                   </div>
                 </form>

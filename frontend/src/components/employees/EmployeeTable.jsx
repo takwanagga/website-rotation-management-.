@@ -54,7 +54,6 @@ export default function EmployeeTable({
   onView,
   onEdit,
   onDelete,
-  onToggleStatut,
 }) {
   const totalPages = Math.max(1, Math.ceil(totalCount / perPage));
 
@@ -110,15 +109,12 @@ export default function EmployeeTable({
                     {row.email}
                   </td>
                   <td className="px-4 py-3">
-                    <button
-                      type="button"
-                      onClick={() => onToggleStatut(row)}
-                      title="Cliquer pour changer de statut"
-                      className={`relative inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-colors cursor-pointer select-none ${statusStyles(status)}`}
+                    <span
+                      className={`relative inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold select-none ${statusStyles(status)}`}
                     >
                       <span className="w-2 h-2 rounded-full bg-current" />
                       {statusLabel(status)}
-                    </button>
+                    </span>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex gap-2">

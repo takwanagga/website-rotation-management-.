@@ -72,6 +72,12 @@ const employeSchema = new mongoose.Schema({
         type: Number,
         min: 18,
         max: 65
+    },
+    congeDebut: {
+        type: Date
+    },
+    congeFin: {
+        type: Date
     }
 }, { timestamps: true });
 

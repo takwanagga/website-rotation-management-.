@@ -16,9 +16,9 @@ const emptyForm = {
   age: "",
   MotDePasse: "",
   statut: "actif",
+  congeDebut: "",
+  congeFin: "",
 };
-
-const STATUTS_CYCLE = ["actif", "inactif", "en congé"];
 
 export default function Employees() {
   const [employes, setEmployes] = useState([]);
@@ -68,19 +68,6 @@ export default function Employees() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleToggleStatut = async (employe) => {
-    let i = STATUTS_CYCLE.indexOf(employe.statut || "actif");
-    if (i < 0) i = 0;
-    const next = STATUTS_CYCLE[(i + 1) % STATUTS_CYCLE.length];
-    try {
-      await employeeService.setStatut(employe._id, next);
-      toast.success(`Statut changé en : ${next}`);
-      fetchEmployes();
-    } catch {
-      toast.error("Erreur lors du changement de statut");
-    }
-  };
-
   const openForm = (employe = null) => {
     if (employe) {
       setEditingId(employe._id);
@@ -95,6 +82,8 @@ export default function Employees() {
         age: employe.age != null ? String(employe.age) : "",
         MotDePasse: "",
         statut: employe.statut || "actif",
+        congeDebut: employe.congeDebut ? employe.congeDebut.split('T')[0] : "",
+        congeFin: employe.congeFin ? employe.congeFin.split('T')[0] : "",
       });
     } else {
       setEditingId(null);
@@ -120,6 +109,10 @@ export default function Employees() {
         ...formData,
         age: formData.age === "" ? undefined : Number(formData.age),
       };
+      if (payload.statut !== "en congé") {
+        payload.congeDebut = null;
+        payload.congeFin = null;
+      }
       if (editingId) {
         if (!payload.MotDePasse) delete payload.MotDePasse;
         await employeeService.update(editingId, payload);
@@ -141,9 +134,12 @@ export default function Employees() {
       await employeeService.remove(id);
       toast.success("Employé supprimé avec succès");
       fetchEmployes();
-    } catch {
-      toast.error("Erreur lors de la suppression");
-    }
+    } catch (error) {
+  console.error("Erreur complète :", error);
+  // Affiche le message d'erreur du backend s'il existe, sinon le message par défaut
+  const errorMessage = error.response?.data?.message || error.response?.data?.error || "Erreur lors de la suppression";
+  toast.error(errorMessage);
+}
   };
 
   return (
@@ -193,7 +189,6 @@ export default function Employees() {
               onView={openViewModal}
               onEdit={openForm}
               onDelete={handleDelete}
-              onToggleStatut={handleToggleStatut}
             />
           </div>
         </div>
@@ -214,6 +209,12 @@ export default function Employees() {
                 <p><span className="font-semibold">Role:</span> {selectedEmploye.role}</p>
                 <p><span className="font-semibold">Statut:</span> {selectedEmploye.statut}</p>
                 <p><span className="font-semibold">Age:</span> {selectedEmploye.age ?? "-"}</p>
+                {selectedEmploye.statut === "en congé" && (
+                  <>
+                    <p><span className="font-semibold">Congé de:</span> {selectedEmploye.congeDebut ? new Date(selectedEmploye.congeDebut).toLocaleDateString() : "-"}</p>
+                    <p><span className="font-semibold">À:</span> {selectedEmploye.congeFin ? new Date(selectedEmploye.congeFin).toLocaleDateString() : "-"}</p>
+                  </>
+                )}
                 <p className="md:col-span-2"><span className="font-semibold">Email:</span> {selectedEmploye.email}</p>
                 <p className="md:col-span-2"><span className="font-semibold">Telephone:</span> {selectedEmploye.telephone || "-"}</p>
                 <p className="md:col-span-2"><span className="font-semibold">Localisation:</span> {selectedEmploye.localisation || "-"}</p>
@@ -354,6 +355,37 @@ export default function Employees() {
                       <option value="en congé">En congé</option>
                     </select>
                   </div>
+                  {formData.statut === "en congé" && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Date de début de congé *
+                        </label>
+                        <input
+                          required
+                          type="date"
+                          name="congeDebut"
+                          value={formData.congeDebut}
+                          onChange={handleInputChange}
+                          className="w-full p-2 border rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Date de fin de congé *
+                        </label>
+                        <input
+                          required
+                          type="date"
+                          name="congeFin"
+                          min={formData.congeDebut}
+                          value={formData.congeFin}
+                          onChange={handleInputChange}
+                          className="w-full p-2 border rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                        />
+                      </div>
+                    </>
+                  )}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Rôle *
@@ -367,7 +399,6 @@ export default function Employees() {
                     >
                       <option value="chauffeur">Chauffeur</option>
                       <option value="receveur">Receveur</option>
-                      <option value="admin">Administrateur</option>
                     </select>
                   </div>
                   <div>

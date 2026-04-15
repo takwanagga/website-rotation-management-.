@@ -10,6 +10,7 @@ const emptyForm = {
   debutDeLigne: "",
   finDeLigne: "",
   distance: "",
+  status: "actif",
 };
 
 export default function Lignes() {
@@ -68,6 +69,7 @@ export default function Lignes() {
         debutDeLigne: ligne.debutDeLigne ?? "",
         finDeLigne: ligne.finDeLigne ?? "",
         distance: ligne.distance != null ? String(ligne.distance) : "",
+        status: ligne.status || ligne.statut || "actif",
       });
     } else {
       setEditingId(null);
@@ -104,19 +106,6 @@ export default function Lignes() {
       fetchLignes();
     } catch (err) {
       toast.error(err.response?.data?.error || "Une erreur est survenue");
-    }
-  };
-
- 
-
-  const handleToggleStatut = async (ligne) => {
-    try {
-      const newStatut = ligne.status === "actif" ? "inactif" : "actif";
-      await ligneService.update(ligne._id, { ...ligne, status: newStatut });
-      toast.success("Statut modifié avec succès");
-      fetchLignes();
-    } catch {
-      toast.error("Erreur lors de la modification du statut");
     }
   };
 
@@ -168,7 +157,6 @@ export default function Lignes() {
               onPageChange={setPage}
               onView={openViewModal}
               onEdit={openForm}
-              onToggleStatut={handleToggleStatut}
             />
           </div>
         </div>
@@ -218,12 +206,12 @@ export default function Lignes() {
                 >
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Code *
+                      Nom *
                     </label>
                     <input
                       required
                       type="text"
-                      name="code"
+                      name="libelle"
                       value={formData.libelle}
                       onChange={handleInputChange}
                       className="w-full p-2 border rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
@@ -237,7 +225,7 @@ export default function Lignes() {
                     <input
                       required
                       type="text"
-                      name="depart"
+                      name="debutDeLigne"
                       value={formData.debutDeLigne}
                       onChange={handleInputChange}
                       className="w-full p-2 border rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
@@ -251,7 +239,7 @@ export default function Lignes() {
                     <input
                       required
                       type="text"
-                      name="arrivee"
+                      name="finDeLigne"
                       value={formData.finDeLigne}
                       onChange={handleInputChange}
                       className="w-full p-2 border rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
@@ -272,6 +260,20 @@ export default function Lignes() {
                       className="w-full p-2 border rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
                       placeholder="Distance en km"
                     />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Statut
+                    </label>
+                    <select
+                      name="status"
+                      value={formData.status}
+                      onChange={handleInputChange}
+                      className="w-full p-2 border rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                    >
+                      <option value="actif">Actif</option>
+                      <option value="inactif">Inactif</option>
+                    </select>
                   </div>
                 </form>
               </div>

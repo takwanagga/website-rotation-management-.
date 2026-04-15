@@ -17,12 +17,7 @@ export const employeeService = {
   },
 
   async remove(id) {
-    const { data } = await http.get(`/employe/supprimer/${id}`);
-    return data;
-  },
-
-  async setStatut(id, statut) {
-    const { data } = await http.post(`/employe/modifier/${id}`, { statut });
+    const { data } = await http.post(`/employe/supprimer/${id}`);
     return data;
   },
 };
