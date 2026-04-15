@@ -12,7 +12,7 @@ import AdminProfile from "../Pages/AdminProfile.jsx";
 import Unauthorized from "../Pages/Unauthorized.jsx";
 import PrivateRoutes from "./PrivateRoutes.jsx";
 import RoleBaseRoutes from "./RoleBaseRoutes.jsx";
-
+import MonPlanning from "../Pages/MonPlanning.jsx";
 function AdminLayout({ children }) {
   return (
     <PrivateRoutes>
@@ -79,6 +79,16 @@ export default function AppRoutes() {
         }
       />
       <Route path="*" element={<Navigate to="/login" replace />} />
+      <Route
+  path="/mon-planning"
+  element={
+    <PrivateRoutes>
+      <RoleBaseRoutes allowedRoles={["chauffeur", "receveur"]}>
+        <MonPlanning />
+      </RoleBaseRoutes>
+    </PrivateRoutes>
+  }
+/>
     </Routes>
   );
 }

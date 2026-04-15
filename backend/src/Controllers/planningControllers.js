@@ -174,21 +174,18 @@ export async function publierPlanning(req, res) {
 }
 
 // Fonction lister planning par employé
+
 export async function listerPlanningParEmploye(req, res) {
-    try {
-        const { employeId } = req.params;
-
-        const planning = await Planning.find({ employe: employeId })
-            .populate('ligne')
-            .populate('bus')
-            .populate('employe')
-            .sort({ date: 1, heuredebut: 1 });
-
-        res.status(200).json(planning);
-    } catch (error) {
-        console.error("Error in listerPlanningParEmploye controller", error);
-        res.status(500).json({ message: "Internal server error" });
-    }
+  try {
+    const { employeId } = req.params;
+    const filter = { employe: employeId, publie: true }; // Only published
+    const planning = await Planning.find(filter)
+      .populate("ligne").populate("bus").populate("employe")
+      .sort({ date: 1, heuredebut: 1 });
+    res.status(200).json(planning);
+  } catch (error) {
+    res.status(500).json({ message: "Internal server error" });
+  }
 }
 
 // Fonction lister planning par ligne

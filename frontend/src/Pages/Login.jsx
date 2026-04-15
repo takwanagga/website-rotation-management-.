@@ -30,6 +30,15 @@ const Login = () => {
     } finally {
       setIsLoading(false);
     }
+     const data = await loginEmployee(email, password);
+  login(data.data.employe, data.data.token);
+  
+  // Redirect based on role:
+  if (data.data.employe.role === "admin") {
+    navigate("/admin-dashboard");
+  } else {
+    navigate("/mon-planning");
+  }
   };
  
   return (

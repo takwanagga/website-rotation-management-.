@@ -19,8 +19,10 @@ import {
   updatePlanning,
   deletePlanning,
   publishPlanningById,
+  listPlanningByDateRange,
 } from "../lib/api.js";
 import axiosInstance from "../api/axios.js";
+import { exportPlanningPDF } from "../utils/exportPDF.js";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const HEURES = [
@@ -93,18 +95,20 @@ export default function PlanningQuotidien() {
   const { user } = useAuth();
 
   // State
-  const [dragging, setDragging]           = useState(null);
-  const [selectedDate, setSelectedDate]   = useState(() => new Date());
-  const [assignments, setAssignments]     = useState({});
-  const [conflicts, setConflicts]         = useState([]);
-  const [loading, setLoading]             = useState(true);
-  const [aiLoading, setAiLoading]         = useState(false);
-  const [aiDone, setAiDone]               = useState(false);
-  const [savingDraft, setSavingDraft]     = useState(false);
-  const [publishing, setPublishing]       = useState(false);
+  const [dragging, setDragging]= useState(null);
+  const [selectedDate, setSelectedDate]= useState(() => new Date());
+  const [assignments, setAssignments]= useState({});
+  const [conflicts, setConflicts]= useState([]);
+  const [loading, setLoading]= useState(true);
+  const [aiLoading, setAiLoading]= useState(false);
+  const [aiDone, setAiDone]= useState(false);
+  const [savingDraft, setSavingDraft]= useState(false);
+  const [publishing, setPublishing]= useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [savedPlanningMap, setSavedPlanningMap] = useState({});
   const [deletedPlanningIds, setDeletedPlanningIds] = useState([]);
   const [showIncompleteOnly, setShowIncompleteOnly] = useState(false);
+
 
   const [lignes, setLignes]         = useState([]);
   const [chauffeurs, setChauffeurs] = useState([]);
@@ -353,7 +357,7 @@ export default function PlanningQuotidien() {
       const nextPlanningMap = { ...savedPlanningMap };
       for (const id of deletedPlanningIds) await deletePlanning(id);
       for (const [key, assignment] of Object.entries(assignments)) {
-        if (assignment.type === "bus") continue;
+        if (assignment.type === "bus" || assignment.type === "receveur") continue;
         const [dateKey, heure, ligneId] = key.split("__");
         const busKey = `${dateKey}__${heure}__${ligneId}__bus`;
         const busAssignment = assignments[busKey];
@@ -405,6 +409,26 @@ export default function PlanningQuotidien() {
     } finally {
       setPublishing(false);
     }
+    const dateKey = formatDateKey(selectedDate);
+  const employeeIds = new Set();
+  Object.entries(assignments).forEach(([key, val]) => {
+    if (key.startsWith(dateKey) && val.employeeId) {
+      employeeIds.add(val.employeeId);
+    }
+  });
+  
+  const dateStr = selectedDate.toLocaleDateString("fr-FR", {
+    weekday: "long", day: "numeric", month: "long"
+  });
+  
+  await notificationService.sendToMany(
+    `Votre planning du ${dateStr} a été publié. Consultez votre espace employé.`,
+    "planning_publie",
+    [...employeeIds]
+  );
+  
+  toast.success("Planning publié et employés notifiés ✅");
+
   };
 
   // ── Loading screen ──────────────────────────────────────────────────────────
@@ -426,6 +450,7 @@ export default function PlanningQuotidien() {
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
+    
     <div className="flex bg-gray-50 min-h-screen">
       <AdminSidebar />
       <div className="flex-1 md:ml-64 flex flex-col min-h-screen pt-16 md:pt-0">
@@ -433,6 +458,7 @@ export default function PlanningQuotidien() {
 
         {/* ── Top Navbar ── */}
         <header className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between gap-4 sticky top-0 z-10">
+          
           <div className="flex-1 max-w-sm">
             <div className="relative">
               <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -442,9 +468,9 @@ export default function PlanningQuotidien() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={handleSaveDraft} disabled={savingDraft} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 border border-gray-200 bg-white rounded-xl hover:bg-gray-50 disabled:opacity-60 transition">
+            <button onClick={() => exportPlanningPDF(selectedDate, lignes, assignments, HEURES)} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 border border-gray-200 bg-white rounded-xl hover:bg-gray-50 transition">
               <FileText size={16} />
-              {savingDraft ? "Enregistrement…" : "Exporter PDF"}
+              Exporter PDF
             </button>
             <button className="relative p-2 rounded-xl hover:bg-gray-100 transition">
               <Bell size={18} className="text-gray-600" />

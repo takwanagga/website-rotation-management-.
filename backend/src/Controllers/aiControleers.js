@@ -102,7 +102,7 @@ export async function generatePlanningIA(req, res) {
 
     // ── Fetch active resources ─────────────────────────────────────────────
     const [buses, employes, lignes] = await Promise.all([
-      Bus.find({ status: 'disponible' }).lean(),
+      Bus.find({ status: 'actif' }).lean(),
       Employe.find({ statut: 'actif' }).lean(),
       Ligne.find({ status: 'actif' }).lean(),
     ]);
