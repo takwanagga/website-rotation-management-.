@@ -223,6 +223,7 @@ export async function generatePlanningIA(req, res) {
           ligne:      ligne._id,
           bus:        bestBus._id,
           employe:    bestDriver._id,
+          receveur:   bestReceveur._id,
           publie:     false,
         });
       }

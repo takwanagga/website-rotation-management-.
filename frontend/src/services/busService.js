@@ -2,7 +2,7 @@ import http from "./httpClient.js";
 
 function normalizeBus(bus = {}) {
   const matricule = bus.matricule ?? bus.immatriculation ?? "";
-  const status = bus.status ?? bus.statut ?? "disponible";
+  const status = bus.status ?? bus.statut ?? "actif";
   const model = bus.model ?? bus.type ?? "";
   return {
     ...bus,
@@ -19,7 +19,7 @@ function toBusPayload(payload = {}) {
   return {
     model: payload.model ?? payload.type ?? payload.numero ?? "",
     matricule: payload.matricule ?? payload.immatriculation ?? "",
-    status: payload.status ?? payload.statut ?? "disponible",
+    status: payload.status ?? payload.statut ?? "actif",
   };
 }
 

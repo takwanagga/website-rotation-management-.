@@ -1,4 +1,5 @@
 import Planning from '../models/planning.js';
+import Notification from '../models/notification.js';
 
 async function findPlanningConflict({ date, heuredebut, ligne, bus, employe, excludeId }) {
     const baseFilter = { date, heuredebut, ligne: { $ne: ligne } };
@@ -39,11 +40,11 @@ async function findPlanningConflict({ date, heuredebut, ligne, bus, employe, exc
 // Fonction ajouter planning
 export async function ajouterPlanning(req, res) {
     try {
-        const { date, heuredebut, heurefin, ligne, bus, employe } = req.body;
+        const { date, heuredebut, heurefin, ligne, bus, employe, receveur } = req.body;
         
         // Validation basique
-        if (!date || !heuredebut || !heurefin || !ligne || !bus || !employe) {
-            return res.status(400).json({ message: "Tous les champs sont obligatoires" });
+        if (!date || !heuredebut || !heurefin || !ligne || !bus || !employe || !receveur) {
+            return res.status(400).json({ message: "Tous les champs sont obligatoires y compris le receveur" });
         }
 
         const conflict = await findPlanningConflict({ date, heuredebut, ligne, bus, employe });
@@ -57,7 +58,8 @@ export async function ajouterPlanning(req, res) {
             heurefin, 
             ligne, 
             bus, 
-            employe 
+            employe,
+            receveur
         });
         
         const savedPlanning = await planning.save();
@@ -66,7 +68,8 @@ export async function ajouterPlanning(req, res) {
         const populatedPlanning = await Planning.findById(savedPlanning._id)
             .populate('ligne')
             .populate('bus')
-            .populate('employe');
+            .populate('employe')
+            .populate('receveur');
 
         res.status(201).json(populatedPlanning);
     } catch (error) {
@@ -78,7 +81,7 @@ export async function ajouterPlanning(req, res) {
 // Fonction modifier planning (toutes les infos)
 export async function modifierPlanning(req, res) {
     try {
-        const { date, heuredebut, heurefin, ligne, bus, employe } = req.body;
+        const { date, heuredebut, heurefin, ligne, bus, employe, receveur } = req.body;
 
         const conflict = await findPlanningConflict({
             date,
@@ -92,14 +95,31 @@ export async function modifierPlanning(req, res) {
             return res.status(conflict.status).json(conflict.payload);
         }
         
+        const existingPlanning = await Planning.findById(req.params.id);
+
         const updatedPlanning = await Planning.findByIdAndUpdate(
             req.params.id,
-            { date, heuredebut, heurefin, ligne, bus, employe },
+            { date, heuredebut, heurefin, ligne, bus, employe, receveur },
             { returnDocument: 'after' }
         )
         .populate('ligne')
         .populate('bus')
-        .populate('employe');
+        .populate('employe')
+        .populate('receveur');
+
+        if (!updatedPlanning) {
+            return res.status(404).json({ error: "Planning non trouvé" });
+        }
+
+        if (existingPlanning && existingPlanning.publie) {
+            const dateStr = new Date(date).toLocaleDateString('fr-FR');
+            const msg = `Votre planning du ${dateStr} à ${heuredebut} sur la ligne a été modifié.`;
+            
+            await Notification.create({ message: msg, type: 'modification_planning', destinataire: employe });
+            if (receveur) {
+                await Notification.create({ message: msg, type: 'modification_planning', destinataire: receveur });
+            }
+        }
 
         if (!updatedPlanning) {
             return res.status(404).json({ error: "Planning non trouvé" });
@@ -134,7 +154,8 @@ export async function obtenirPlanningParId(req, res) {
         const planning = await Planning.findById(req.params.id)
             .populate('ligne')
             .populate('bus')
-            .populate('employe');
+            .populate('employe')
+            .populate('receveur');
 
         if (!planning) {
             return res.status(404).json({ error: "Planning non trouvé" });
@@ -159,7 +180,8 @@ export async function publierPlanning(req, res) {
         )
         .populate('ligne')
         .populate('bus')
-        .populate('employe');
+        .populate('employe')
+        .populate('receveur');
 
         if (!updatedPlanning) {
             return res.status(404).json({ error: "Planning non trouvé" });
@@ -178,9 +200,9 @@ export async function publierPlanning(req, res) {
 export async function listerPlanningParEmploye(req, res) {
   try {
     const { employeId } = req.params;
-    const filter = { employe: employeId, publie: true }; // Only published
+    const filter = { $or: [{ employe: employeId }, { receveur: employeId }], publie: true };
     const planning = await Planning.find(filter)
-      .populate("ligne").populate("bus").populate("employe")
+      .populate("ligne").populate("bus").populate("employe").populate("receveur")
       .sort({ date: 1, heuredebut: 1 });
     res.status(200).json(planning);
   } catch (error) {
@@ -197,6 +219,7 @@ export async function listerPlanningParLigne(req, res) {
             .populate('ligne')
             .populate('bus')
             .populate('employe')
+            .populate('receveur')
             .sort({ date: 1, heuredebut: 1 });
 
         res.status(200).json(planning);
@@ -215,6 +238,7 @@ export async function listerPlanningParBus(req, res) {
             .populate('ligne')
             .populate('bus')
             .populate('employe')
+            .populate('receveur')
             .sort({ date: 1, heuredebut: 1 });
 
         res.status(200).json(planning);
@@ -241,6 +265,7 @@ export async function listerPlanningParDateRange(req, res) {
             .populate('ligne')
             .populate('bus')
             .populate('employe')
+            .populate('receveur')
             .sort({ date: 1, heuredebut: 1 });
 
         res.status(200).json(planning);

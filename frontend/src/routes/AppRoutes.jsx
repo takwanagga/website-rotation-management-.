@@ -1,6 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import Login from "../Pages/Login.jsx";
-import Signup from "../Pages/Signup.jsx";
+import EmployeLogin from "../Pages/EmployeLogin.jsx";
 import ForgotPassword from "../Pages/ForgotPassword.jsx";
 import PlanningQuotidien from "../Pages/PlanningQuotidien.jsx";
 import AdminDashboard from "../Pages/admindashboard.jsx";
@@ -26,7 +26,7 @@ export default function AppRoutes() {
     <Routes>
       <Route path="/" element={<Navigate to="/admin-dashboard" replace />} />
       <Route path="/login" element={<Login />} />
-      <Route path="/signup" element={<Signup />} />
+      <Route path="/employe-login" element={<EmployeLogin />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/unauthorized" element={<Unauthorized />} />
       <Route path="/planning" element={<PlanningQuotidien />} />

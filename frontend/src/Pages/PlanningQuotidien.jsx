@@ -13,6 +13,7 @@ import {
 import toast, { Toaster } from "react-hot-toast";
 import { employeeService } from "../services/employeeService.js";
 import { busService } from "../services/busService.js";
+import { notificationService } from "../services/notificationService.js";
 import { ligneService } from "../services/ligneService.js";
 import {
   addPlanning,
@@ -132,20 +133,40 @@ export default function PlanningQuotidien() {
         employeeService.list(),
         busService.list(),
       ]);
-      const activeLignes = lignesData.filter((l) => (l.status || l.statut) === "actif");
+
+      const activeLignes = lignesData.filter((l) =>
+        (l.status || l.statut || "actif") === "actif"
+      );
+      const activeBuses = busesData.filter((b) =>
+        (b.status || b.statut || "actif") === "actif"
+      );
+      const activeEmployes = employesData.filter(
+        (e) => (e.statut || "actif") === "actif"
+      );
+
       setLignes(activeLignes);
-      setBuses(busesData.filter((b) => (b.status || b.statut) === "actif"));
-      const activeEmployes = employesData.filter((e) => e.statut === "actif");
+      setBuses(activeBuses);
       setChauffeurs(activeEmployes.filter((e) => e.role === "chauffeur"));
       setReceveurs(activeEmployes.filter((e) => e.role === "receveur"));
-    } catch {
-      toast.error("Erreur lors du chargement des données");
+
+      if (activeLignes.length === 0) toast.error("Aucune ligne disponible");
+      if (activeBuses.length === 0) toast.error("Aucun bus disponible");
+      if (activeEmployes.filter((e) => e.role === "chauffeur").length === 0)
+        toast.error("Aucun chauffeur actif");
+      if (activeEmployes.filter((e) => e.role === "receveur").length === 0)
+        toast.error("Aucun receveur actif");
+    } catch (err) {
+      console.error("Erreur chargement données:", err);
+      const msg = err.response?.data?.message || err.message || "";
+      toast.error(msg || "Erreur lors du chargement des données");
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   // Fetch planning data when date changes
   useEffect(() => {

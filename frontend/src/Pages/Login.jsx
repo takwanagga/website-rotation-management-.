@@ -19,7 +19,12 @@ const Login = () => {
     try {
       const data = await loginEmployee(email, password);
       login(data.data.employe, data.data.token);
-      navigate("/admin-dashboard");
+      
+      if (data.data.employe.role === "admin") {
+        navigate("/admin-dashboard");
+      } else {
+        setError("Cette page est réservée aux administrateurs. Les employés doivent utiliser le portail employé.");
+      }
     } catch (err) {
       const msg =
         err.response?.data?.error ||
@@ -30,15 +35,6 @@ const Login = () => {
     } finally {
       setIsLoading(false);
     }
-     const data = await loginEmployee(email, password);
-  login(data.data.employe, data.data.token);
-  
-  // Redirect based on role:
-  if (data.data.employe.role === "admin") {
-    navigate("/admin-dashboard");
-  } else {
-    navigate("/mon-planning");
-  }
   };
  
   return (
@@ -70,34 +66,8 @@ const Login = () => {
         </div>
  
         <div className="px-6 pt-6 pb-8">
-          {/* Tab switcher */}
-          <div className="flex bg-gray-100 rounded-xl p-1 mb-6">
-            <button
-              type="button"
-              onClick={() => setTab("admin")}
-              className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${
-                tab === "admin"
-                  ? "bg-white text-indigo-700 shadow-sm"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              Administrateur
-            </button>
-            <button
-              type="button"
-              onClick={() => setTab("employe")}
-              className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${
-                tab === "employe"
-                  ? "bg-white text-indigo-700 shadow-sm"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              Employé
-            </button>
-          </div>
- 
           <h2 className="text-xl font-bold text-gray-800 text-center mb-6">
-            Bienvenue
+            Espace Administrateur
           </h2>
  
           {error && (
@@ -135,11 +105,7 @@ const Login = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   disabled={isLoading}
-                  placeholder={
-                    tab === "admin"
-                      ? "admin@transroute.tn"
-                      : "employe@transroute.tn"
-                  }
+                  placeholder="admin@transroute.tn"
                   className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent disabled:opacity-60 transition"
                 />
               </div>
@@ -210,21 +176,14 @@ const Login = () => {
           </form>
  
           <div className="mt-6 text-center space-y-2">
-            <p className="text-sm text-gray-500">
-              Pas encore de compte ?{" "}
+            <div className="pt-4 border-t border-gray-200 w-full">
               <Link
-                to="/signup"
-                className="text-indigo-600 font-semibold hover:underline"
+                to="/employe-login"
+                className="text-sm font-medium text-indigo-600 hover:text-indigo-800 transition block text-center bg-gray-50 p-3 rounded-lg hover:bg-gray-100"
               >
-                S'inscrire
+                Vous êtes employé ? Connectez-vous ici
               </Link>
-            </p>
-            <Link
-              to="/forgot-password"
-              className="text-sm text-indigo-500 hover:underline block"
-            >
-              Mot de passe oublié ?
-            </Link>
+            </div>
           </div>
         </div>
       </div>

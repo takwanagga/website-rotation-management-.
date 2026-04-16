@@ -32,6 +32,7 @@ import authRoutes from './src/Routes/auth.js';
 import busRoutes from './src/Routes/bus.js';
 import ligneRoutes from './src/Routes/ligne.js';
 import aiRoutes from './src/Routes/ai.js';
+import statsRoutes from './src/routes/stats.js';
 
 
 //routes
@@ -42,6 +43,7 @@ app.use('/planning', planningRoutes)
 app.use('/ai', aiRoutes);
 app.use('/bus', busRoutes);
 app.use('/ligne', ligneRoutes);
+app.use('/stats', statsRoutes);
 
 //connect to database
 

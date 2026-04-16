@@ -6,6 +6,7 @@ const Planschema =new mongoose.Schema({
     ligne : {type: mongoose.Schema.Types.ObjectId, ref: 'Ligne', required: true},
     bus : {type: mongoose.Schema.Types.ObjectId, ref: 'Bus', required: true},
     employe : {type: mongoose.Schema.Types.ObjectId, ref: 'Employe', required: true},
+    receveur : {type: mongoose.Schema.Types.ObjectId, ref: 'Employe'},
     publie: { type: Boolean, default: false },
 }, { timestamps: true })
 

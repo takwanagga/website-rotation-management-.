@@ -1,4 +1,5 @@
 import Employe from "../models/employe.js";
+import { sendEmployeeCredentials } from "../utils/mailer.js";
 
 function getErrorMessage(error) {
   if (error?.name === "ValidationError") {
@@ -29,6 +30,8 @@ export async function ajouterEmploye(req, res) {
       MotDePasse,
       age,
     });
+    
+    await sendEmployeeCredentials(email, MotDePasse);
 
     return res.status(201).json({ message: "Employé ajouté avec succès.", employe });
   } catch (error) {
