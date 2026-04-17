@@ -4,6 +4,7 @@ import 'dotenv/config'
 import cors from 'cors'
 import cookieParser from 'cookie-parser';
 import errorHandler from './src/Middleware/errorHandler.js';
+import connectDB  from './src/config/db.js';
 
 const app = express();
 
@@ -47,14 +48,13 @@ app.use('/stats', statsRoutes);
 
 //connect to database
 
-mongoose.connect(process.env.CONNECTION_STRING
-);
+connectDB().then(() => {
+  app.listen(process.env.PORT, () => {
+    console.log(`Server running on port ${process.env.PORT}`);
+  });
+});
 
-const db = mongoose.connection;
-db.on('error', console.error.bind(console, 'connection error'));
-db.once('open', function () {
-  console.log("connected to database");
-})
+
 app.use(errorHandler);
 //start server
 app.listen(process.env.PORT, () => {
