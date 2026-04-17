@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import AdminSidebar from "../components/AdminSidebar.jsx";
+import NotificationBell from "../components/NotificationBell.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import {
   ChevronLeft,
   ChevronRight,
   AlertCircle,
-  Bell,
   FileText,
   CheckCircle2,
   AlertTriangle,
@@ -63,11 +63,12 @@ function parseHeureRange(heureRange) {
   return { heuredebut: start, heurefin: end };
 }
 
-// ── Conflict validation ───────────────────────────────────────────────────────
+// ── Conflict check ────────────────────────────────────────────────────────────
 function validateConflict({ assignments, dateKey, heure, ligneId, item, currentKey }) {
   const duplicate = Object.entries(assignments).find(([key, value]) => {
     if (key === currentKey) return false;
-    const [d, h, l] = key.split("__");
+    const parts = key.split("__");
+    const [d, h, l] = parts;
     if (d !== dateKey || h !== heure || l === ligneId) return false;
     if (item.type === "bus") return value.busId === item._id;
     return value.employeeId === item._id;
@@ -75,16 +76,11 @@ function validateConflict({ assignments, dateKey, heure, ligneId, item, currentK
   return !duplicate;
 }
 
-// ── Cell-completeness helper ──────────────────────────────────────────────────
-/**
- * Returns: 'empty' | 'incomplete' | 'complete'
- * 'complete' means cell has all 3: bus + driver + receveur
- */
+// ── Cell completeness ─────────────────────────────────────────────────────────
 function getCellStatus(assignments, dateKey, heure, ligne) {
-  const hasBus     = !!assignments[`${dateKey}__${heure}__${ligne._id}__bus`];
-  const hasDriver  = !!assignments[`${dateKey}__${heure}__${ligne._id}__driver`];
-  const hasReceveur= !!assignments[`${dateKey}__${heure}__${ligne._id}__receveur`];
-
+  const hasBus      = !!assignments[`${dateKey}__${heure}__${ligne._id}__bus`];
+  const hasDriver   = !!assignments[`${dateKey}__${heure}__${ligne._id}__driver`];
+  const hasReceveur = !!assignments[`${dateKey}__${heure}__${ligne._id}__receveur`];
   const count = [hasBus, hasDriver, hasReceveur].filter(Boolean).length;
   if (count === 0) return "empty";
   if (count === 3) return "complete";
@@ -95,21 +91,18 @@ function getCellStatus(assignments, dateKey, heure, ligne) {
 export default function PlanningQuotidien() {
   const { user } = useAuth();
 
-  // State
-  const [dragging, setDragging]= useState(null);
-  const [selectedDate, setSelectedDate]= useState(() => new Date());
-  const [assignments, setAssignments]= useState({});
-  const [conflicts, setConflicts]= useState([]);
-  const [loading, setLoading]= useState(true);
-  const [aiLoading, setAiLoading]= useState(false);
-  const [aiDone, setAiDone]= useState(false);
-  const [savingDraft, setSavingDraft]= useState(false);
-  const [publishing, setPublishing]= useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
+  const [dragging, setDragging]             = useState(null);
+  const [selectedDate, setSelectedDate]     = useState(() => new Date());
+  const [assignments, setAssignments]       = useState({});
+  const [conflicts, setConflicts]           = useState([]);
+  const [loading, setLoading]               = useState(true);
+  const [aiLoading, setAiLoading]           = useState(false);
+  const [aiDone, setAiDone]                 = useState(false);
+  const [savingDraft, setSavingDraft]       = useState(false);
+  const [publishing, setPublishing]         = useState(false);
   const [savedPlanningMap, setSavedPlanningMap] = useState({});
   const [deletedPlanningIds, setDeletedPlanningIds] = useState([]);
   const [showIncompleteOnly, setShowIncompleteOnly] = useState(false);
-
 
   const [lignes, setLignes]         = useState([]);
   const [chauffeurs, setChauffeurs] = useState([]);
@@ -134,29 +127,15 @@ export default function PlanningQuotidien() {
         busService.list(),
       ]);
 
-      const activeLignes = lignesData.filter((l) =>
-        (l.status || l.statut || "actif") === "actif"
-      );
-      const activeBuses = busesData.filter((b) =>
-        (b.status || b.statut || "actif") === "actif"
-      );
-      const activeEmployes = employesData.filter(
-        (e) => (e.statut || "actif") === "actif"
-      );
+      const activeLignes   = lignesData.filter((l) => (l.status || l.statut || "actif") === "actif");
+      const activeBuses    = busesData.filter((b) => (b.status || b.statut || "actif") === "actif");
+      const activeEmployes = employesData.filter((e) => (e.statut || "actif") === "actif");
 
       setLignes(activeLignes);
       setBuses(activeBuses);
       setChauffeurs(activeEmployes.filter((e) => e.role === "chauffeur"));
       setReceveurs(activeEmployes.filter((e) => e.role === "receveur"));
-
-      if (activeLignes.length === 0) toast.error("Aucune ligne disponible");
-      if (activeBuses.length === 0) toast.error("Aucun bus disponible");
-      if (activeEmployes.filter((e) => e.role === "chauffeur").length === 0)
-        toast.error("Aucun chauffeur actif");
-      if (activeEmployes.filter((e) => e.role === "receveur").length === 0)
-        toast.error("Aucun receveur actif");
     } catch (err) {
-      console.error("Erreur chargement données:", err);
       const msg = err.response?.data?.message || err.message || "";
       toast.error(msg || "Erreur lors du chargement des données");
     } finally {
@@ -164,11 +143,9 @@ export default function PlanningQuotidien() {
     }
   }, []);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Fetch planning data when date changes
+  // ── Fetch plannings when date changes ───────────────────────────────────────
   useEffect(() => {
     const fetchPlannings = async () => {
       try {
@@ -176,28 +153,57 @@ export default function PlanningQuotidien() {
         start.setDate(start.getDate() - 7);
         const end = new Date(selectedDate);
         end.setDate(end.getDate() + 7);
-        const { data } = await listPlanningByDateRange(formatDateKey(start), formatDateKey(end));
-        
+
+        const { data } = await listPlanningByDateRange(
+          formatDateKey(start),
+          formatDateKey(end)
+        );
+
         const newAssignments = {};
         const savedMap = {};
-        data.forEach(p => {
-            const dateKey = p.date.split('T')[0];
-            const heure = `${p.heuredebut}-${p.heurefin}`;
-            if (p.bus) {
-                newAssignments[`${dateKey}__${heure}__${p.ligne?._id}__bus`] = { ...p.bus, type: "bus", busId: p.bus._id, matricule: p.bus.matricule };
-            }
-            if (p.employe) {
-                const roleType = p.employe.role === "chauffeur" ? "driver" : "receveur";
-                newAssignments[`${dateKey}__${heure}__${p.ligne?._id}__${roleType}`] = { ...p.employe, type: roleType, employeeId: p.employe._id };
-            }
-            // Record saved IDs mapping
-            const keyBase = `${dateKey}__${heure}__${p.ligne?._id}`;
-            savedMap[`${keyBase}__bus`] = p._id;
-            savedMap[`${keyBase}__driver`] = p._id;
-            savedMap[`${keyBase}__receveur`] = p._id;
+
+        data.forEach((p) => {
+          const dateKey = p.date.split("T")[0];
+          const heure   = `${p.heuredebut}-${p.heurefin}`;
+          const ligneId = p.ligne?._id;
+          if (!ligneId) return;
+
+          const slotKey = `${dateKey}__${heure}__${ligneId}`;
+
+          // ── Bus ──
+          if (p.bus) {
+            newAssignments[`${slotKey}__bus`] = {
+              ...p.bus,
+              type: "bus",
+              busId: p.bus._id,
+              matricule: p.bus.matricule,
+            };
+            savedMap[`${slotKey}__bus`] = p._id;
+          }
+
+          // ── Chauffeur (employe) ──
+          if (p.employe) {
+            newAssignments[`${slotKey}__driver`] = {
+              ...p.employe,
+              type: "driver",
+              employeeId: p.employe._id,
+            };
+            savedMap[`${slotKey}__driver`] = p._id;
+          }
+
+          // ── Receveur ──  ← was missing!
+          if (p.receveur) {
+            newAssignments[`${slotKey}__receveur`] = {
+              ...p.receveur,
+              type: "receveur",
+              employeeId: p.receveur._id,
+            };
+            savedMap[`${slotKey}__receveur`] = p._id;
+          }
         });
+
         setAssignments(newAssignments);
-        setSavedPlanningMap(prev => ({ ...prev, ...savedMap }));
+        setSavedPlanningMap((prev) => ({ ...prev, ...savedMap }));
       } catch (err) {
         console.error("Erreur chargement planning", err);
       }
@@ -230,7 +236,7 @@ export default function PlanningQuotidien() {
               newConflicts.push({
                 dateKey: daySlots[i].dateKey,
                 heure: daySlots[i].heure,
-                message: `Conflit: employé assigné à deux lignes au même créneau (${daySlots[i].heure})`,
+                message: `Conflit: employé assigné à deux lignes sur le créneau ${daySlots[i].heure}`,
               });
             }
           }
@@ -242,15 +248,13 @@ export default function PlanningQuotidien() {
     return newConflicts.length === 0;
   }, []);
 
-  // ── Incomplete-cell stats ───────────────────────────────────────────────────
+  // ── Incomplete stats ────────────────────────────────────────────────────────
   const incompleteCellCount = useMemo(() => {
     const dateKey = formatDateKey(selectedDate);
     let count = 0;
-    for (const heure of HEURES) {
-      for (const ligne of lignes) {
+    for (const heure of HEURES)
+      for (const ligne of lignes)
         if (getCellStatus(assignments, dateKey, heure, ligne) === "incomplete") count++;
-      }
-    }
     return count;
   }, [assignments, selectedDate, lignes]);
 
@@ -263,6 +267,7 @@ export default function PlanningQuotidien() {
   const handleDrop = (e, heure, ligne, date) => {
     e.preventDefault();
     if (!dragging) return;
+
     const dateKey  = formatDateKey(date);
     const roleType = dragging.type === "bus"
       ? "bus"
@@ -275,10 +280,7 @@ export default function PlanningQuotidien() {
         setDragging(null);
         return;
       }
-      const newAssignments = {
-        ...assignments,
-        [key]: { ...dragging, type: "bus", busId: dragging._id },
-      };
+      const newAssignments = { ...assignments, [key]: { ...dragging, type: "bus", busId: dragging._id } };
       setAssignments(newAssignments);
       checkConflicts(newAssignments);
       setDragging(null);
@@ -286,16 +288,12 @@ export default function PlanningQuotidien() {
       return;
     }
 
-    // Employee drop
     if (!validateConflict({ assignments, dateKey, heure, ligneId: ligne._id, item: dragging, currentKey: key })) {
       toast.error(`${dragging.nom} est déjà assigné(e) à ce créneau`);
       setDragging(null);
       return;
     }
-    const newAssignments = {
-      ...assignments,
-      [key]: { ...dragging, type: roleType, employeeId: dragging._id },
-    };
+    const newAssignments = { ...assignments, [key]: { ...dragging, type: roleType, employeeId: dragging._id } };
     setAssignments(newAssignments);
     checkConflicts(newAssignments);
     setDragging(null);
@@ -335,24 +333,19 @@ export default function PlanningQuotidien() {
       .map(([key, value]) => ({ key, value }));
   };
 
-  // ── AI: call backend ────────────────────────────────────────────────────────
+  // ── AI ──────────────────────────────────────────────────────────────────────
   const handleAI = async () => {
     setAiLoading(true);
     setAiDone(false);
     try {
       const dateKey = formatDateKey(selectedDate);
-      const { data } = await axiosInstance.post("/ai/generate-planning", {
-        date: dateKey,
-        saveToDb: false,
-      });
-
+      const { data } = await axiosInstance.post("/ai/generate-planning", { date: dateKey, saveToDb: false });
       const { assignments: aiAssignments, stats } = data;
 
-      // Merge AI assignments into existing (AI fills empty slots only)
       setAssignments((prev) => {
         const merged = { ...prev };
         Object.entries(aiAssignments).forEach(([key, val]) => {
-          if (!merged[key]) merged[key] = val; // Don't overwrite manual assignments
+          if (!merged[key]) merged[key] = val;
         });
         checkConflicts(merged);
         return merged;
@@ -364,42 +357,78 @@ export default function PlanningQuotidien() {
         { duration: 4000 }
       );
     } catch (err) {
-      const msg = err?.response?.data?.message || "Erreur lors de l'optimisation IA";
-      toast.error(msg);
+      toast.error(err?.response?.data?.message || "Erreur lors de l'optimisation IA");
     } finally {
       setAiLoading(false);
     }
   };
 
-  // ── Save draft ──────────────────────────────────────────────────────────────
+  // ── Save Draft — FIXED: groups by slot and includes receveur ────────────────
   const handleSaveDraft = async () => {
     try {
       setSavingDraft(true);
       const nextPlanningMap = { ...savedPlanningMap };
-      for (const id of deletedPlanningIds) await deletePlanning(id);
+
+      // 1. Delete removed plannings
+      for (const id of deletedPlanningIds) {
+        try { await deletePlanning(id); } catch (e) { console.warn("Delete failed:", e.message); }
+      }
+
+      // 2. Group assignments by (dateKey, heure, ligneId) → one Planning doc per slot
+      const slotMap = {};
       for (const [key, assignment] of Object.entries(assignments)) {
-        if (assignment.type === "bus" || assignment.type === "receveur") continue;
-        const [dateKey, heure, ligneId] = key.split("__");
-        const busKey = `${dateKey}__${heure}__${ligneId}__bus`;
-        const busAssignment = assignments[busKey];
-        if (!busAssignment?.busId) continue;
+        const parts = key.split("__");
+        if (parts.length < 4) continue;
+        const [dateKey, heure, ligneId, type] = parts;
+        const slotKey = `${dateKey}__${heure}__${ligneId}`;
+        if (!slotMap[slotKey]) slotMap[slotKey] = { dateKey, heure, ligneId };
+        if (type === "bus")      slotMap[slotKey].bus      = assignment;
+        else if (type === "driver")   slotMap[slotKey].driver   = assignment;
+        else if (type === "receveur") slotMap[slotKey].receveur = assignment;
+      }
+
+      // 3. Save / update each complete slot
+      for (const [slotKey, slot] of Object.entries(slotMap)) {
+        const { dateKey, heure, ligneId, bus, driver, receveur } = slot;
+
+        // Only save slots that are fully assigned (bus + chauffeur + receveur)
+        if (!bus?.busId || !driver?.employeeId || !receveur?.employeeId) continue;
+
         const { heuredebut, heurefin } = parseHeureRange(heure);
         const payload = {
-          date: dateKey,
+          date:      dateKey,
           heuredebut,
           heurefin,
-          ligne: ligneId,
-          bus: busAssignment.busId,
-          employe: assignment.employeeId,
+          ligne:     ligneId,
+          bus:       bus.busId,
+          employe:   driver.employeeId,
+          receveur:  receveur.employeeId,   // ← was missing in original code!
         };
-        if (nextPlanningMap[key]) {
-          const response = await updatePlanning(nextPlanningMap[key], payload);
-          nextPlanningMap[key] = response.data?._id || nextPlanningMap[key];
-        } else {
-          const response = await addPlanning(payload);
-          nextPlanningMap[key] = response.data?._id;
+
+        try {
+          const existingId = nextPlanningMap[`${slotKey}__driver`];
+          let id;
+
+          if (existingId) {
+            const resp = await updatePlanning(existingId, payload);
+            id = resp.data?._id || existingId;
+          } else {
+            const resp = await addPlanning(payload);
+            id = resp.data?._id;
+          }
+
+          if (id) {
+            // Map all three sub-keys to the same DB document id
+            nextPlanningMap[`${slotKey}__bus`]      = id;
+            nextPlanningMap[`${slotKey}__driver`]   = id;
+            nextPlanningMap[`${slotKey}__receveur`] = id;
+          }
+        } catch (err) {
+          const msg = err?.response?.data?.message || "Erreur d'enregistrement";
+          toast.error(`Slot ${heure} — ${msg}`);
         }
       }
+
       setSavedPlanningMap(nextPlanningMap);
       setDeletedPlanningIds([]);
       toast.success("Brouillon enregistré avec succès");
@@ -413,46 +442,54 @@ export default function PlanningQuotidien() {
   // ── Publish ─────────────────────────────────────────────────────────────────
   const handlePublish = async () => {
     const selectedDateKey = formatDateKey(selectedDate);
-    const ids = Object.entries(savedPlanningMap)
-      .filter(([key]) => key.startsWith(`${selectedDateKey}__`))
-      .map(([, id]) => id)
-      .filter(Boolean);
+
+    const ids = [
+      ...new Set(
+        Object.entries(savedPlanningMap)
+          .filter(([key]) => key.startsWith(`${selectedDateKey}__`))
+          .map(([, id]) => id)
+          .filter(Boolean)
+      ),
+    ];
+
     if (ids.length === 0) {
-      toast.error("Aucun planning sauvegardé à publier");
+      toast.error("Enregistrez d'abord le brouillon avant de publier");
       return;
     }
+
     try {
       setPublishing(true);
       await Promise.all(ids.map((id) => publishPlanningById(id, true)));
-      toast.success("Planning publié avec succès");
+
+      // Notify all assigned employees
+      const employeeIds = new Set();
+      Object.entries(assignments).forEach(([key, val]) => {
+        if (key.startsWith(selectedDateKey) && val.employeeId) {
+          employeeIds.add(val.employeeId);
+        }
+      });
+
+      const dateStr = selectedDate.toLocaleDateString("fr-FR", {
+        weekday: "long", day: "numeric", month: "long",
+      });
+
+      if (employeeIds.size > 0) {
+        await notificationService.sendToMany(
+          `📅 Votre planning du ${dateStr} a été publié. Connectez-vous pour le consulter.`,
+          "planning_publie",
+          [...employeeIds]
+        );
+      }
+
+      toast.success(`Planning publié — ${employeeIds.size} employé(s) notifié(s) ✅`);
     } catch (error) {
       toast.error(error?.response?.data?.message || "Erreur lors de la publication");
     } finally {
       setPublishing(false);
     }
-    const dateKey = formatDateKey(selectedDate);
-  const employeeIds = new Set();
-  Object.entries(assignments).forEach(([key, val]) => {
-    if (key.startsWith(dateKey) && val.employeeId) {
-      employeeIds.add(val.employeeId);
-    }
-  });
-  
-  const dateStr = selectedDate.toLocaleDateString("fr-FR", {
-    weekday: "long", day: "numeric", month: "long"
-  });
-  
-  await notificationService.sendToMany(
-    `Votre planning du ${dateStr} a été publié. Consultez votre espace employé.`,
-    "planning_publie",
-    [...employeeIds]
-  );
-  
-  toast.success("Planning publié et employés notifiés ✅");
-
   };
 
-  // ── Loading screen ──────────────────────────────────────────────────────────
+  // ── Loading ─────────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="flex">
@@ -471,7 +508,6 @@ export default function PlanningQuotidien() {
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    
     <div className="flex bg-gray-50 min-h-screen">
       <AdminSidebar />
       <div className="flex-1 md:ml-64 flex flex-col min-h-screen pt-16 md:pt-0">
@@ -479,7 +515,6 @@ export default function PlanningQuotidien() {
 
         {/* ── Top Navbar ── */}
         <header className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between gap-4 sticky top-0 z-10">
-          
           <div className="flex-1 max-w-sm">
             <div className="relative">
               <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -489,14 +524,17 @@ export default function PlanningQuotidien() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={() => exportPlanningPDF(selectedDate, lignes, assignments, HEURES)} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 border border-gray-200 bg-white rounded-xl hover:bg-gray-50 transition">
+            <button
+              onClick={() => exportPlanningPDF(selectedDate, lignes, assignments, HEURES)}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 border border-gray-200 bg-white rounded-xl hover:bg-gray-50 transition"
+            >
               <FileText size={16} />
               Exporter PDF
             </button>
-            <button className="relative p-2 rounded-xl hover:bg-gray-100 transition">
-              <Bell size={18} className="text-gray-600" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
-            </button>
+
+            {/* ← Real NotificationBell (admin's own notifications) */}
+            <NotificationBell />
+
             <div className="flex items-center gap-2 pl-2 border-l border-gray-200">
               <div className="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">{initial}</div>
               <div className="hidden sm:block">
@@ -521,18 +559,18 @@ export default function PlanningQuotidien() {
             </div>
           )}
 
-          {/* ── Incomplete cell warning ── */}
+          {/* ── Incomplete warning ── */}
           {incompleteCellCount > 0 && (
             <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <AlertTriangle className="text-amber-500 flex-shrink-0" size={18} />
                 <p className="text-sm text-amber-800">
                   <span className="font-semibold">{incompleteCellCount} créneau(x) incomplet(s)</span>
-                  {" "}— chaque créneau doit contenir 1 chauffeur + 1 receveur + 1 bus.
+                  {" "}— chaque créneau doit avoir 1 chauffeur + 1 receveur + 1 bus.
                 </p>
               </div>
               <button
-                onClick={() => setShowIncompleteOnly(v => !v)}
+                onClick={() => setShowIncompleteOnly((v) => !v)}
                 className="text-xs font-medium text-amber-700 underline whitespace-nowrap"
               >
                 {showIncompleteOnly ? "Tout afficher" : "Filtrer"}
@@ -561,64 +599,92 @@ export default function PlanningQuotidien() {
           {/* ── Date navigator ── */}
           <div className="bg-white border border-gray-200 rounded-xl p-3 mb-5 shadow-sm">
             <div className="flex items-center gap-2 overflow-x-auto">
-              <button onClick={() => { const d = new Date(selectedDate); d.setDate(d.getDate() - 1); setSelectedDate(d); }} className="p-1.5 rounded-lg hover:bg-gray-100 flex-shrink-0">
+              <button
+                onClick={() => { const d = new Date(selectedDate); d.setDate(d.getDate() - 1); setSelectedDate(d); }}
+                className="p-1.5 rounded-lg hover:bg-gray-100 flex-shrink-0"
+              >
                 <ChevronLeft size={18} />
               </button>
+
               {calendarDays.map((date) => {
-                const sel = isSameDate(date, selectedDate);
+                const sel     = isSameDate(date, selectedDate);
+                const isToday = isSameDate(date, new Date());
                 return (
                   <button
                     key={formatDateKey(date)}
                     onClick={() => setSelectedDate(date)}
-                    className={`min-w-[52px] px-2 py-2 rounded-lg text-center transition flex-shrink-0 ${sel ? "bg-indigo-600 text-white" : "hover:bg-gray-50 text-gray-600"}`}
+                    className={`min-w-[56px] px-2 py-2 rounded-lg text-center transition flex-shrink-0 relative ${
+                      sel
+                        ? "bg-indigo-600 text-white shadow-md"
+                        : "hover:bg-gray-50 text-gray-600"
+                    }`}
                   >
-                    <div className="text-xs uppercase">{date.toLocaleDateString("fr-FR", { weekday: "short" })}</div>
-                    <div className="text-xs font-bold mt-0.5">{date.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" })}</div>
+                    <div className="text-xs uppercase">
+                      {date.toLocaleDateString("fr-FR", { weekday: "short" })}
+                    </div>
+                    <div className="text-sm font-bold mt-0.5">
+                      {date.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" })}
+                    </div>
+                    {/* Today indicator */}
+                    {isToday && !sel && (
+                      <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-indigo-500 rounded-full" />
+                    )}
+                    {isToday && sel && (
+                      <div className="text-[9px] text-indigo-200 font-semibold mt-0.5">Aujourd'hui</div>
+                    )}
                   </button>
                 );
               })}
-              <button onClick={() => { const d = new Date(selectedDate); d.setDate(d.getDate() + 1); setSelectedDate(d); }} className="p-1.5 rounded-lg hover:bg-gray-100 flex-shrink-0">
+
+              <button
+                onClick={() => { const d = new Date(selectedDate); d.setDate(d.getDate() + 1); setSelectedDate(d); }}
+                className="p-1.5 rounded-lg hover:bg-gray-100 flex-shrink-0"
+              >
                 <ChevronRight size={18} />
               </button>
             </div>
           </div>
 
+          {/* ── Selected date display ── */}
+          <div className="mb-4">
+            <h2 className="text-lg font-bold text-gray-800">
+              Planning du{" "}
+              <span className="text-indigo-600">
+                {selectedDate.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+              </span>
+              {isSameDate(selectedDate, new Date()) && (
+                <span className="ml-2 text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-semibold align-middle">
+                  Aujourd'hui
+                </span>
+              )}
+            </h2>
+          </div>
+
           {/* ── Main layout: sidebar + grid ── */}
           <div className="flex gap-5 items-start">
-            {/* ── Draggable resource panel ── */}
+            {/* ── Resource panel ── */}
             <div className="w-56 flex-shrink-0 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-              <div className="overflow-y-auto max-h-[70vh] p-4 space-y-5">
+              <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Ressources</p>
+                <p className="text-xs text-gray-400 mt-0.5">Glisser vers un créneau</p>
+              </div>
+              <div className="overflow-y-auto max-h-[65vh] p-4 space-y-5">
 
                 {/* Buses */}
                 <div>
                   <div className="flex items-center gap-2 mb-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                      <rect x="1" y="3" width="15" height="13" rx="2" strokeLinecap="round" strokeLinejoin="round" />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M16 8h4l3 5v3h-7V8z" />
-                      <circle cx="5.5" cy="18.5" r="2.5" /><circle cx="18.5" cy="18.5" r="2.5" />
-                    </svg>
-                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Bus Disponibles</span>
+                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">🚌 Bus</span>
+                    <span className="ml-auto text-xs text-gray-400">{buses.length}</span>
                   </div>
-                  {buses.length === 0 && <p className="text-xs text-gray-400">Aucun bus disponible</p>}
+                  {buses.length === 0 && <p className="text-xs text-gray-400">Aucun bus actif</p>}
                   {buses.map((b) => (
                     <div
                       key={b._id}
                       draggable
-                      /* ─────────────────────────────────────────────────────────
-                         BUG FIX: spread first, then override `type` so that
-                         normalizeBus's  `type: bus.type ?? model`  (e.g. "Iveco")
-                         doesn't shadow the drop-type sentinel "bus".
-                      ───────────────────────────────────────────────────────── */
                       onDragStart={(e) => handleDragStart(e, { ...b, type: "bus" })}
                       className="flex items-center gap-2 p-2.5 rounded-lg border border-indigo-100 bg-indigo-50 mb-1.5 cursor-grab hover:shadow-sm hover:border-indigo-300 transition"
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-indigo-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                        <rect x="1" y="3" width="15" height="13" rx="2" strokeLinecap="round" strokeLinejoin="round" />
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M16 8h4l3 5v3h-7V8z" />
-                        <circle cx="5.5" cy="18.5" r="2.5" /><circle cx="18.5" cy="18.5" r="2.5" />
-                      </svg>
                       <div className="min-w-0">
-                        {/* Show matricule — guaranteed defined after normalizeBus */}
                         <div className="text-xs font-bold text-indigo-900 truncate">
                           {b.matricule || b.immatriculation || "—"}
                         </div>
@@ -631,10 +697,8 @@ export default function PlanningQuotidien() {
                 {/* Chauffeurs */}
                 <div>
                   <div className="flex items-center gap-2 mb-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Chauffeurs</span>
+                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">🧑‍✈️ Chauffeurs</span>
+                    <span className="ml-auto text-xs text-gray-400">{chauffeurs.length}</span>
                   </div>
                   {chauffeurs.length === 0 && <p className="text-xs text-gray-400">Aucun chauffeur actif</p>}
                   {chauffeurs.map((c) => (
@@ -649,7 +713,7 @@ export default function PlanningQuotidien() {
                       </div>
                       <div className="min-w-0">
                         <div className="text-xs font-bold text-emerald-900 truncate">{c.nom} {c.prenom}</div>
-                        <div className="text-xs text-emerald-400">Chauffeur{c.age ? ` · ${c.age} ans` : ""}</div>
+                        <div className="text-xs text-emerald-400">{c.age ? `${c.age} ans` : "Chauffeur"}</div>
                       </div>
                     </div>
                   ))}
@@ -658,10 +722,8 @@ export default function PlanningQuotidien() {
                 {/* Receveurs */}
                 <div>
                   <div className="flex items-center gap-2 mb-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Receveurs</span>
+                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">🎫 Receveurs</span>
+                    <span className="ml-auto text-xs text-gray-400">{receveurs.length}</span>
                   </div>
                   {receveurs.length === 0 && <p className="text-xs text-gray-400">Aucun receveur actif</p>}
                   {receveurs.map((r) => (
@@ -676,11 +738,12 @@ export default function PlanningQuotidien() {
                       </div>
                       <div className="min-w-0">
                         <div className="text-xs font-bold text-amber-900 truncate">{r.nom} {r.prenom}</div>
-                        <div className="text-xs text-amber-400">Receveur{r.age ? ` · ${r.age} ans` : ""}</div>
+                        <div className="text-xs text-amber-400">{r.age ? `${r.age} ans` : "Receveur"}</div>
                       </div>
                     </div>
                   ))}
                 </div>
+
               </div>
             </div>
 
@@ -690,16 +753,18 @@ export default function PlanningQuotidien() {
                 <table className="w-full border-collapse text-sm">
                   <thead>
                     <tr className="border-b border-gray-200 bg-gray-50">
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-28">Heure</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-28 sticky left-0 bg-gray-50 z-10">
+                        Heure
+                      </th>
                       {lignes.length === 0 ? (
-                        <th className="px-4 py-3 text-xs text-gray-400 font-normal">Aucune ligne disponible</th>
+                        <th className="px-4 py-3 text-xs text-gray-400 font-normal">
+                          Aucune ligne disponible
+                        </th>
                       ) : (
                         lignes.map((l) => (
-                          <th key={l._id} className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider border-l border-gray-100 min-w-[160px]">
+                          <th key={l._id} className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider border-l border-gray-100 min-w-[180px]">
                             {l.libelle}
-                            {l.distance ? (
-                              <span className="ml-1 text-gray-400 font-normal normal-case">({l.distance} km)</span>
-                            ) : null}
+                            {l.distance ? <span className="ml-1 text-gray-400 font-normal normal-case">({l.distance} km)</span> : null}
                           </th>
                         ))
                       )}
@@ -708,11 +773,9 @@ export default function PlanningQuotidien() {
                   <tbody>
                     {HEURES.map((heure) => (
                       <tr key={heure} className="border-b border-gray-100 last:border-0">
-                        <td className="px-4 py-3 text-xs font-bold text-gray-600 whitespace-nowrap align-top">
+                        <td className="px-4 py-3 text-xs font-bold text-gray-600 whitespace-nowrap align-top sticky left-0 bg-white z-10 border-r border-gray-100">
                           {heure}
-                          {parseInt(heure.split(":")[0]) >= 18 && (
-                            <span className="ml-1 text-xs text-indigo-400">🌙</span>
-                          )}
+                          {parseInt(heure.split(":")[0]) >= 18 && <span className="ml-1">🌙</span>}
                         </td>
                         {lignes.length === 0 ? (
                           <td className="px-4 py-3 text-xs text-gray-300 text-center">—</td>
@@ -721,10 +784,8 @@ export default function PlanningQuotidien() {
                             const slotAssignments = getSlotAssignments(selectedDate, heure, ligne);
                             const cellStatus      = getCellStatus(assignments, dateKey, heure, ligne);
 
-                            // Filter: hide complete cells when "show incomplete only" is on
-                            if (showIncompleteOnly && cellStatus !== "incomplete") return (
-                              <td key={ligne._id} className="px-3 py-2 border-l border-gray-100 min-h-[72px] bg-gray-50/30 align-top" />
-                            );
+                            if (showIncompleteOnly && cellStatus !== "incomplete")
+                              return <td key={ligne._id} className="px-3 py-2 border-l border-gray-100 bg-gray-50/30 align-top" />;
 
                             const hasConflict = slotAssignments.some(({ key }) =>
                               conflicts.some((c) => {
@@ -733,11 +794,10 @@ export default function PlanningQuotidien() {
                               })
                             );
 
-                            // Cell background by status
                             let cellBg = "";
-                            if (dragging) cellBg = "bg-indigo-50/60";
+                            if (dragging) cellBg = "bg-blue-50/40 ring-1 ring-inset ring-blue-100";
                             else if (hasConflict) cellBg = "bg-red-50";
-                            else if (cellStatus === "complete") cellBg = "bg-emerald-50/40";
+                            else if (cellStatus === "complete") cellBg = "bg-emerald-50/50";
                             else if (cellStatus === "incomplete") cellBg = "bg-amber-50/60";
 
                             return (
@@ -745,14 +805,14 @@ export default function PlanningQuotidien() {
                                 key={ligne._id}
                                 onDragOver={handleDragOver}
                                 onDrop={(e) => handleDrop(e, heure, ligne, selectedDate)}
-                                className={`px-3 py-2 border-l border-gray-100 min-h-[72px] align-top transition-colors relative ${cellBg}`}
+                                className={`px-3 py-2 border-l border-gray-100 min-h-[80px] align-top transition-colors relative ${cellBg}`}
                               >
-                                {/* Completeness indicator badge */}
+                                {/* Status badge */}
                                 {cellStatus === "complete" && (
                                   <CheckCircle2 size={12} className="absolute top-1.5 right-1.5 text-emerald-500" />
                                 )}
                                 {cellStatus === "incomplete" && (
-                                  <AlertTriangle size={12} className="absolute top-1.5 right-1.5 text-amber-500" title="Créneau incomplet (bus + chauffeur + receveur requis)" />
+                                  <AlertTriangle size={12} className="absolute top-1.5 right-1.5 text-amber-500" title="Incomplet" />
                                 )}
 
                                 {slotAssignments.length === 0 ? (
@@ -760,20 +820,20 @@ export default function PlanningQuotidien() {
                                 ) : (
                                   <div className="space-y-1">
                                     {slotAssignments.map(({ key, value: assignment }) => {
-                                      // ───────────────────────────────────────────
-                                      // Display label: always use matricule for bus
-                                      // ───────────────────────────────────────────
-                                      const label = assignment.type === "bus"
-                                        ? (assignment.matricule || assignment.immatriculation || "Bus")
-                                        : `${assignment.nom ?? ""} ${(assignment.prenom ?? "").charAt(0)}.`;
+                                      const label =
+                                        assignment.type === "bus"
+                                          ? assignment.matricule || assignment.immatriculation || "Bus"
+                                          : `${assignment.nom ?? ""} ${(assignment.prenom ?? "").charAt(0)}.`;
 
-                                      const colorClass = assignment.type === "bus"
-                                        ? "bg-indigo-100 text-indigo-800"
-                                        : assignment.type === "driver"
-                                        ? "bg-emerald-100 text-emerald-800"
-                                        : "bg-amber-100 text-amber-800";
+                                      const colorClass =
+                                        assignment.type === "bus"
+                                          ? "bg-indigo-100 text-indigo-800"
+                                          : assignment.type === "driver"
+                                          ? "bg-emerald-100 text-emerald-800"
+                                          : "bg-amber-100 text-amber-800";
 
-                                      const icon = assignment.type === "bus" ? "🚌"
+                                      const icon =
+                                        assignment.type === "bus" ? "🚌"
                                         : assignment.type === "driver" ? "🧑‍✈️"
                                         : "🎫";
 
@@ -782,13 +842,13 @@ export default function PlanningQuotidien() {
                                           key={key}
                                           className={`flex items-center justify-between gap-1 px-2 py-1 rounded-lg text-xs font-semibold ${colorClass}`}
                                         >
-                                          <div className="flex items-center gap-1.5 min-w-0">
+                                          <div className="flex items-center gap-1 min-w-0">
                                             <span>{icon}</span>
                                             <span className="truncate">{label}</span>
                                           </div>
                                           <button
                                             onClick={() => handleRemove(key)}
-                                            className="opacity-50 hover:opacity-100 flex-shrink-0 font-bold text-sm leading-none ml-1"
+                                            className="opacity-50 hover:opacity-100 flex-shrink-0 font-bold leading-none ml-1"
                                             title="Retirer"
                                           >
                                             ×
@@ -797,12 +857,11 @@ export default function PlanningQuotidien() {
                                       );
                                     })}
 
-                                    {/* Prompt to complete incomplete cell */}
                                     {cellStatus === "incomplete" && (
-                                      <div className="text-xs text-amber-600 font-medium pt-0.5 italic">
-                                        {!assignments[`${dateKey}__${heure}__${ligne._id}__bus`] && "Ajouter un bus · "}
-                                        {!assignments[`${dateKey}__${heure}__${ligne._id}__driver`] && "Ajouter chauffeur · "}
-                                        {!assignments[`${dateKey}__${heure}__${ligne._id}__receveur`] && "Ajouter receveur"}
+                                      <div className="text-[10px] text-amber-600 italic pt-0.5">
+                                        {!assignments[`${dateKey}__${heure}__${ligne._id}__bus`] && "🚌 bus manquant  "}
+                                        {!assignments[`${dateKey}__${heure}__${ligne._id}__driver`] && "🧑‍✈️ chauffeur manquant  "}
+                                        {!assignments[`${dateKey}__${heure}__${ligne._id}__receveur`] && "🎫 receveur manquant"}
                                       </div>
                                     )}
                                   </div>
@@ -823,20 +882,19 @@ export default function PlanningQuotidien() {
           <div className="mt-5 flex items-center gap-3 flex-wrap">
             <button
               onClick={handleSaveDraft}
-              disabled={savingDraft}
+              disabled={savingDraft || publishing}
               className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-sm font-bold rounded-xl transition shadow-sm"
             >
-              {savingDraft ? "Enregistrement…" : "Enregistrer brouillon"}
+              {savingDraft ? "Enregistrement…" : "💾 Enregistrer brouillon"}
             </button>
             <button
               onClick={handlePublish}
               disabled={publishing || savingDraft}
               className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-sm font-bold rounded-xl transition shadow-sm"
             >
-              {publishing ? "Publication…" : "Publier"}
+              {publishing ? "Publication…" : "📤 Publier & notifier"}
             </button>
 
-            {/* Summary pill */}
             <div className="ml-auto flex items-center gap-2 text-xs text-gray-500">
               {incompleteCellCount > 0 ? (
                 <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-amber-100 text-amber-700 rounded-full font-semibold">
@@ -850,6 +908,14 @@ export default function PlanningQuotidien() {
                 </span>
               )}
             </div>
+          </div>
+
+          {/* ── Legend ── */}
+          <div className="mt-4 flex flex-wrap gap-3 text-xs text-gray-500">
+            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-emerald-100 border border-emerald-300" /><span>Complet</span></div>
+            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-amber-100 border border-amber-300" /><span>Incomplet</span></div>
+            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-red-100 border border-red-300" /><span>Conflit</span></div>
+            <div className="flex items-center gap-1.5"><span className="text-gray-400">ℹ️</span><span>Chaque créneau doit avoir 1 bus + 1 chauffeur + 1 receveur pour être sauvegardé</span></div>
           </div>
         </main>
       </div>
