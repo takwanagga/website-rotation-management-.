@@ -1,4 +1,6 @@
-import transporter from '../config/mailer.js';
+// backend/utils/email.js
+// Chemin corrigé : depuis backend/utils/ vers backend/src/config/mailer.js
+import transporter from '../src/config/mailer.js';
 
 const APP_NAME = process.env.APP_NAME || 'TransRoute';
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
@@ -52,7 +54,7 @@ export const sendEmployeeCredentials = async (email, password) => {
   // Fallback console si SMTP non configuré
   if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('📧  SMTP non configuré — identifiants :');
+    console.log('📧  SMTP non configuré — identifiants à envoyer manuellement :');
     console.log(`   Email        : ${email}`);
     console.log(`   Mot de passe : ${password}`);
     console.log(`   Lien         : ${loginUrl}`);
@@ -67,7 +69,7 @@ export const sendEmployeeCredentials = async (email, password) => {
       Voici vos identifiants de connexion pour accéder à votre espace personnel.
     </p>
     <div class="box">
-      <h3>🔐 Vos identifiants</h3>
+      <h3>🔐 Vos identifiants de connexion</h3>
       <div class="row">
         <span class="label">Adresse email</span>
         <span class="value">${email}</span>
@@ -78,7 +80,7 @@ export const sendEmployeeCredentials = async (email, password) => {
       </div>
     </div>
     <div style="text-align:center">
-      <a href="${loginUrl}" class="btn">Accéder à mon espace →</a>
+      <a href="${loginUrl}" class="btn">Accéder à mon espace employé →</a>
     </div>
     <div class="note">
       ⚠️ <strong>Important :</strong> Pour des raisons de sécurité, changez votre mot de passe
@@ -98,12 +100,11 @@ export const sendEmployeeCredentials = async (email, password) => {
 
 // ── 2. Lien de réinitialisation du mot de passe ───────────────────────────────
 export const sendResetPasswordEmail = async (employe, resetToken) => {
-  // Le lien pointe vers la page frontend de reset
   const resetUrl = `${CLIENT_URL}/reset-password/${resetToken}`;
 
   if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('📧  SMTP non configuré — lien de reset :');
+    console.log('📧  SMTP non configuré — lien de reset (valable 1h) :');
     console.log(`   ${resetUrl}`);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     return;
@@ -113,14 +114,14 @@ export const sendResetPasswordEmail = async (employe, resetToken) => {
     <p style="font-size:18px;font-weight:600;margin-bottom:12px">Réinitialisation du mot de passe 🔑</p>
     <p style="font-size:15px;color:#4a5568;line-height:1.6;margin-bottom:20px">
       Bonjour <strong>${employe.prenom} ${employe.nom}</strong>,<br/>
-      Nous avons reçu une demande de réinitialisation de votre mot de passe.
+      Nous avons reçu une demande de réinitialisation de votre mot de passe pour votre compte <strong>${APP_NAME}</strong>.
       Cliquez sur le bouton ci-dessous pour choisir un nouveau mot de passe.
     </p>
     <div style="text-align:center">
       <a href="${resetUrl}" class="btn">Réinitialiser mon mot de passe →</a>
     </div>
     <div class="box">
-      <h3>🔗 Ou copiez ce lien</h3>
+      <h3>🔗 Ou copiez ce lien dans votre navigateur</h3>
       <div class="row">
         <span class="value">${resetUrl}</span>
       </div>

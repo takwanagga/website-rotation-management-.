@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import validator from 'validator';
+import crypto from 'crypto';
 
 /**
  * Modèle de base pour tous les utilisateurs (admin, chauffeur, receveur).
@@ -102,14 +103,34 @@ utilisateurSchema.pre('save', async function () {
   this.MotDePasse = await bcrypt.hash(this.MotDePasse, salt);
 });
 
-// ── Méthodes partagées ────────────────────────────────────────────────────────
+// comparer mot de passe
 utilisateurSchema.methods.comparePassword = async function (motDePasseCandidat) {
   return bcrypt.compare(motDePasseCandidat, this.MotDePasse);
 };
 
+// ── Méthode : générer un token de réinitialisation ───────────────────────────
+utilisateurSchema.methods.createResetPasswordToken = function () {
+  // Token brut envoyé par email (non stocké en DB)
+  const resetToken = crypto.randomBytes(32).toString('hex');
+ 
+  // Token haché stocké en DB
+  this.resetPasswordToken = crypto
+    .createHash('sha256')
+    .update(resetToken)
+    .digest('hex');
+ 
+  // Expire dans 1 heure
+  this.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000);
+ 
+  return resetToken; // retourne le token brut pour l'email
+};
+ 
+// ── Masquer le mot de passe dans les réponses JSON ───────────────────────────
 utilisateurSchema.methods.toJSON = function () {
   const obj = this.toObject();
   delete obj.MotDePasse;
+  delete obj.resetPasswordToken;
+  delete obj.resetPasswordExpires;
   return obj;
 };
 

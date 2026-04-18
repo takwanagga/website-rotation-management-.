@@ -1,7 +1,9 @@
+// backend/src/Controllers/employeController.js
 import Employe from '../models/employe.js';
 import Admin from '../models/admin.js';
 import Utilisateur from '../models/utilisateur.js';
-import { sendEmployeeCredentials } from '../config/mailer.js';
+// ✅ Chemin corrigé : depuis src/Controllers/ → utils/ se trouve 2 niveaux au-dessus
+import { sendEmployeeCredentials } from '../../utils/email.js';
 
 function getErrorMessage(error) {
   if (error?.name === 'ValidationError') {
@@ -19,14 +21,18 @@ export async function ajouterEmploye(req, res) {
     let utilisateur;
 
     if (role === 'admin') {
-      // Crée via le discriminator Admin
       utilisateur = await Admin.create({ nom, prenom, mecano, localisation, email, role, telephone, MotDePasse, age });
     } else {
-      // Crée via le discriminator Employe (chauffeur / receveur)
       utilisateur = await Employe.create({ nom, prenom, mecano, localisation, email, role, telephone, MotDePasse, age });
     }
 
-    await sendEmployeeCredentials(email, MotDePasse);
+    // Envoie les identifiants par email (ne bloque pas si l'email échoue)
+    try {
+      await sendEmployeeCredentials(email, MotDePasse);
+    } catch (emailErr) {
+      console.error('⚠️  Envoi email identifiants échoué:', emailErr.message);
+      // On continue quand même — l'employé est bien créé
+    }
 
     return res.status(201).json({ message: 'Employé ajouté avec succès.', employe: utilisateur });
   } catch (error) {
@@ -37,14 +43,15 @@ export async function ajouterEmploye(req, res) {
 // ── Modifier un employé ───────────────────────────────────────────────────────
 export async function modifierEmploye(req, res) {
   try {
-    const { MotDePasse, statut, ...rest } = req.body;
+    const { MotDePasse, statut, congeDebut, congeFin, ...rest } = req.body;
 
-    // Utilisateur.findById cherche dans la collection commune
     const utilisateur = await Utilisateur.findById(req.params.id).select('+MotDePasse');
     if (!utilisateur) return res.status(404).json({ error: 'Employé non trouvé.' });
 
     Object.assign(utilisateur, rest);
     if (statut !== undefined) utilisateur.statut = statut;
+    if (congeDebut !== undefined) utilisateur.congeDebut = congeDebut || null;
+    if (congeFin !== undefined) utilisateur.congeFin = congeFin || null;
     if (MotDePasse) utilisateur.MotDePasse = MotDePasse;
 
     await utilisateur.save();
@@ -69,8 +76,6 @@ export async function supprimerEmploye(req, res) {
 // ── Lister tous les employés (gestion automatique des congés expirés) ─────────
 export async function listerEmploye(req, res) {
   try {
-    // Employe.find() retourne uniquement les chauffeurs/receveurs (pas les admins)
-    // Si vous voulez TOUS les utilisateurs : Utilisateur.find()
     let employes = await Employe.find().sort({ createdAt: -1 });
     const now = new Date();
     let updated = false;

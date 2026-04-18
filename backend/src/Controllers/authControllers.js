@@ -1,7 +1,10 @@
+// backend/src/Controllers/authControllers.js
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import Utilisateur from '../models/utilisateur.js';
 import Admin from '../models/admin.js';
 import Employe from '../models/employe.js';
+import { sendResetPasswordEmail } from '../../utils/email.js';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) throw new Error("JWT_SECRET manquant dans les variables d'environnement.");
@@ -33,7 +36,6 @@ export async function signupEmploye(req, res) {
   try {
     const { nom, prenom, mecano, localisation, email, role, telephone, MotDePasse, age } = req.body;
 
-    // Choisit le bon discriminator selon le rôle
     const Model = role === 'admin' ? Admin : Employe;
     const utilisateur = await Model.create({ nom, prenom, mecano, localisation, email, role, telephone, MotDePasse, age });
 
@@ -50,7 +52,6 @@ export async function loginEmploye(req, res) {
     const { email, MotDePasse } = req.body;
     if (!email || !MotDePasse) return res.status(400).json({ error: 'Email et mot de passe requis.' });
 
-    // findOne sur le modèle de base → cherche dans toute la collection
     const utilisateur = await Utilisateur.findOne({ email: String(email).toLowerCase() }).select('+MotDePasse');
     if (!utilisateur) return res.status(401).json({ error: 'Identifiants invalides.' });
 
@@ -107,7 +108,6 @@ export async function verifyToken(req, res) {
     if (!token) return res.status(401).json({ success: false, error: 'Jeton manquant.' });
 
     const decoded = jwt.verify(token, JWT_SECRET);
-    // findById sur Utilisateur → trouve admin ET employe dans la même collection
     const utilisateur = await Utilisateur.findById(decoded.id);
     if (!utilisateur) return res.status(401).json({ success: false, error: 'Compte introuvable.' });
 
@@ -119,19 +119,87 @@ export async function verifyToken(req, res) {
   }
 }
 
-// ── Mot de passe oublié ───────────────────────────────────────────────────────
+// ── Mot de passe oublié — génère un token et envoie l'email ──────────────────
 export async function forgotPassword(req, res) {
   try {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: 'Email requis.' });
 
     const utilisateur = await Utilisateur.findOne({ email: String(email).toLowerCase() });
-    if (!utilisateur)
-      return res.status(200).json({ message: "Si cet email existe, un lien de réinitialisation a été envoyé." });
 
-    return res.status(200).json({ message: 'Lien de réinitialisation généré.' });
+    // Réponse générique pour ne pas révéler si l'email existe
+    if (!utilisateur) {
+      return res.status(200).json({
+        message: 'Si cet email est enregistré, un lien de réinitialisation a été envoyé.',
+      });
+    }
+
+    // Génère le token et sauvegarde le hash en DB
+    const resetToken = utilisateur.createResetPasswordToken();
+    await utilisateur.save({ validateBeforeSave: false });
+
+    // Envoie l'email
+    try {
+      await sendResetPasswordEmail(utilisateur, resetToken);
+    } catch (emailErr) {
+      // En cas d'erreur d'envoi, efface le token pour ne pas bloquer l'utilisateur
+      utilisateur.resetPasswordToken = undefined;
+      utilisateur.resetPasswordExpires = undefined;
+      await utilisateur.save({ validateBeforeSave: false });
+      console.error('Erreur envoi email reset:', emailErr.message);
+      return res.status(500).json({ error: "Erreur lors de l'envoi de l'email. Réessayez plus tard." });
+    }
+
+    return res.status(200).json({
+      message: 'Si cet email est enregistré, un lien de réinitialisation a été envoyé.',
+    });
   } catch (error) {
     return res.status(500).json({ error: getErrorMessage(error) });
+  }
+}
+
+// ── Réinitialisation du mot de passe avec le token reçu par email ────────────
+export async function resetPassword(req, res) {
+  try {
+    const { password } = req.body;
+
+    if (!password) {
+      return res.status(400).json({ error: 'Le nouveau mot de passe est requis.' });
+    }
+
+    // Hache le token reçu en URL pour le comparer avec celui stocké en DB
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(req.params.token)
+      .digest('hex');
+
+    // Cherche l'utilisateur avec ce token valide (non expiré)
+    const utilisateur = await Utilisateur.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpires: { $gt: Date.now() },
+    }).select('+MotDePasse +resetPasswordToken +resetPasswordExpires');
+
+    if (!utilisateur) {
+      return res.status(400).json({
+        error: 'Le lien de réinitialisation est invalide ou a expiré. Veuillez refaire une demande.',
+      });
+    }
+
+    // Met à jour le mot de passe (le pre-save hook hash automatiquement)
+    utilisateur.MotDePasse = password;
+    utilisateur.resetPasswordToken = undefined;
+    utilisateur.resetPasswordExpires = undefined;
+    await utilisateur.save();
+
+    // Connecte automatiquement l'utilisateur après le reset
+    const token = setTokenCookie(res, utilisateur);
+    return res.status(200).json({
+      message: 'Mot de passe réinitialisé avec succès.',
+      token,
+      role: utilisateur.role,
+    });
+  } catch (error) {
+    return res.status(400).json({ error: getErrorMessage(error) });
   }
 }
 
@@ -143,6 +211,7 @@ export const authController = {
   updateProfile,
   verifyToken,
   forgotPassword,
+  resetPassword,
 };
 
 export default authController;
