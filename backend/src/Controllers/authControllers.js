@@ -32,7 +32,7 @@ function setTokenCookie(res, utilisateur) {
 }
 
 // ── Inscription ───────────────────────────────────────────────────────────────
-export async function signupEmploye(req, res) {
+export async function signupEmploye(req, res, next) {
   try {
     const { nom, prenom, mecano, localisation, email, role, telephone, MotDePasse, age } = req.body;
 
@@ -42,8 +42,9 @@ export async function signupEmploye(req, res) {
     const token = setTokenCookie(res, utilisateur);
     return res.status(201).json({ message: 'Compte créé avec succès.', employe: utilisateur, token });
   } catch (error) {
-    return res.status(400).json({ error: getErrorMessage(error) });
-  }
+    console.error(error); 
+    return res.status(400).json({ error: error.message }); 
+}
 }
 
 // ── Connexion ─────────────────────────────────────────────────────────────────

@@ -75,6 +75,8 @@ const utilisateurSchema = new mongoose.Schema(
       min: 18,
       max: 65,
     },
+    resetPasswordToken:   { type: String, select: false },
+    resetPasswordExpires: { type: Date,   select: false },
   },
   {
     timestamps: true,
@@ -86,8 +88,8 @@ const utilisateurSchema = new mongoose.Schema(
     discriminatorKey: '__type',
     collection: 'employes', // garde la même collection qu'avant → pas de migration
   }
+ 
 );
-
 // ── Hachage du mot de passe avant sauvegarde ──────────────────────────────────
 utilisateurSchema.pre('save', async function () {
   if (!this.isModified('MotDePasse')) return;

@@ -1,5 +1,5 @@
 ﻿import jwt from 'jsonwebtoken';
-import Employe from '../models/employe.js';
+import Utilisateur from '../models/utilisateur.js';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -18,7 +18,7 @@ export const authenticate = async (req, res, next) => {
 
     const decoded = jwt.verify(token, JWT_SECRET);
 
-    const employe = await Employe.findById(decoded.id).select('-MotDePasse');
+    const utilisateur = await Utilisateur.findById(decoded.id).select('-MotDePasse');
 
     if (!employe) {
       return res.status(401).json({ message: 'Compte introuvable ou supprimé.' });

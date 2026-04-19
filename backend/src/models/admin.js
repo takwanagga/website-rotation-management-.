@@ -3,17 +3,12 @@ import Utilisateur from './utilisateur.js';
 
 /**
  * Discriminator "Admin" — hérite de Utilisateur.
- * Le rôle est forcé à "admin" à la création.
- * Pas de champs supplémentaires pour l'instant (extensible).
+ * Le rôle est forcé à "admin" via la valeur par défaut du schéma.
+ * ✅ Pas de pre-save hook → évite le conflit "next is not a function" avec Mongoose 9
+ *    qui se produit quand un parent a un middleware async et l'enfant un middleware callback.
  */
 const adminSchema = new mongoose.Schema({
   // Champs spécifiques aux admins si besoin (ex: permissions, département…)
-});
-
-// S'assure que role = 'admin' à chaque fois qu'un Admin est créé
-adminSchema.pre('save', function (next) {
-  this.role = 'admin';
-  next();
 });
 
 const Admin = Utilisateur.discriminator('Admin', adminSchema);

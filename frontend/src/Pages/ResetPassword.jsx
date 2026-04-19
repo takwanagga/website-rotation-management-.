@@ -1,65 +1,66 @@
-// frontend/src/Pages/ForgotPassword.jsx
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { AtSign, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Lock, ArrowLeft, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import axiosInstance from '../api/axios';
 
-const ForgotPassword = () => {
-  const [email, setEmail] = useState('');
+const ResetPassword = () => {
+  const { token } = useParams(); // ← lit le token depuis l'URL /reset-password/:token
+  const navigate = useNavigate();
+
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [sent, setSent] = useState(false);
+  const [done, setDone] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    setIsLoading(true);
 
+    if (password !== confirm) {
+      setError('Les mots de passe ne correspondent pas.');
+      return;
+    }
+
+    if (password.length < 8) {
+      setError('Le mot de passe doit contenir au moins 8 caractères.');
+      return;
+    }
+
+    setIsLoading(true);
     try {
-      await axiosInstance.post('/auth/forgot-password', { email });
-      // On affiche toujours le succès (même si l'email n'existe pas → sécurité)
-      setSent(true);
+      await axiosInstance.post(`/auth/reset-password/${token}`, { password });
+      setDone(true);
     } catch (err) {
-      // En cas d'erreur serveur réelle (500)
       setError(
         err.response?.data?.error ||
-          "Une erreur s'est produite. Veuillez réessayer."
+          'Le lien est invalide ou expiré. Veuillez refaire une demande.'
       );
     } finally {
       setIsLoading(false);
     }
   };
 
-  // ── Écran de confirmation ────────────────────────────────────────────────────
-  if (sent) {
+  // ── Écran de succès ──────────────────────────────────────────────────────────
+  if (done) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4">
         <div className="w-full max-w-sm bg-white rounded-2xl shadow-xl p-8 text-center">
           <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle className="w-9 h-9 text-emerald-600" />
           </div>
-          <h2 className="text-xl font-bold text-gray-800 mb-2">Email envoyé !</h2>
-          <p className="text-gray-500 text-sm mb-1">
-            Si l'adresse <strong>{email}</strong> est enregistrée dans notre système,
-            vous recevrez un email avec un lien de réinitialisation.
+          <h2 className="text-xl font-bold text-gray-800 mb-2">Mot de passe modifié !</h2>
+          <p className="text-gray-500 text-sm mb-6">
+            Votre mot de passe a été réinitialisé avec succès. Vous pouvez maintenant vous connecter.
           </p>
-          <p className="text-gray-400 text-xs mt-3 mb-6">
-            Le lien est valable <strong>1 heure</strong>. Pensez à vérifier vos spams.
-          </p>
-          <div className="space-y-3">
-            <button
-              onClick={() => { setSent(false); setEmail(''); }}
-              className="w-full py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition"
-            >
-              Utiliser une autre adresse
-            </button>
-            <Link
-              to="/login"
-              className="block w-full py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition text-center"
-            >
-              Retour à la connexion
-            </Link>
-          </div>
+          <button
+            onClick={() => navigate('/login')}
+            className="block w-full py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition text-center"
+          >
+            Aller à la connexion
+          </button>
         </div>
       </div>
     );
@@ -72,11 +73,11 @@ const ForgotPassword = () => {
         {/* Header */}
         <div className="bg-indigo-600 px-8 pt-10 pb-8 flex flex-col items-center">
           <div className="w-16 h-16 bg-indigo-500 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
-            <AtSign className="w-8 h-8 text-white" />
+            <Lock className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-white mb-1">Mot de passe oublié</h1>
+          <h1 className="text-2xl font-bold text-white mb-1">Nouveau mot de passe</h1>
           <p className="text-indigo-200 text-sm text-center">
-            Entrez votre email pour recevoir un lien de réinitialisation
+            Choisissez un mot de passe sécurisé
           </p>
         </div>
 
@@ -88,21 +89,58 @@ const ForgotPassword = () => {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Nouveau mot de passe */}
             <div>
               <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
-                Adresse email
+                Nouveau mot de passe
               </label>
               <div className="relative">
-                <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   required
                   disabled={isLoading}
-                  placeholder="votre@email.com"
-                  className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent disabled:opacity-60 transition"
+                  placeholder="••••••••"
+                  className="w-full pl-10 pr-10 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent disabled:opacity-60 transition"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              <p className="text-xs text-gray-400 mt-1">
+                Min. 8 caractères, 1 majuscule, 1 chiffre, 1 caractère spécial.
+              </p>
+            </div>
+
+            {/* Confirmation */}
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
+                Confirmer le mot de passe
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type={showConfirm ? 'text' : 'password'}
+                  value={confirm}
+                  onChange={(e) => setConfirm(e.target.value)}
+                  required
+                  disabled={isLoading}
+                  placeholder="••••••••"
+                  className="w-full pl-10 pr-10 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent disabled:opacity-60 transition"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirm((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
             </div>
 
@@ -114,10 +152,10 @@ const ForgotPassword = () => {
               {isLoading ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Envoi en cours…
+                  Réinitialisation…
                 </>
               ) : (
-                'Envoyer le lien de réinitialisation'
+                'Réinitialiser le mot de passe'
               )}
             </button>
           </form>
@@ -137,4 +175,4 @@ const ForgotPassword = () => {
   );
 };
 
-export default ForgotPassword;
+export default ResetPassword;

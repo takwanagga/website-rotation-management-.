@@ -7,12 +7,14 @@ import LoadingScreen from "../components/common/LoadingScreen.jsx";
  */
 export default function PrivateRoutes({ children }) {
   const { user, loading } = useAuth();
+  console.log("PrivateRoutes: user=", user, "loading=", loading);
 
   if (loading) {
     return <LoadingScreen message="Vérification de la session…" />;
   }
 
   if (!user) {
+    console.log("PrivateRoutes: No user, redirecting to login");
     return <Navigate to="/login" replace />;
   }
 

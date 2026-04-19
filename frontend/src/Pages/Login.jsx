@@ -2,41 +2,44 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { loginEmployee } from "../lib/api";
- 
+
 const Login = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
-  const [tab, setTab] = useState("admin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
- 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    setIsLoading(true);
-    try {
-      const data = await loginEmployee(email, password);
-      login(data.data.employe, data.data.token);
-      
-      if (data.data.employe.role === "admin") {
-        navigate("/admin-dashboard");
-      } else {
-        setError("Cette page est réservée aux administrateurs. Les employés doivent utiliser le portail employé.");
-      }
-    } catch (err) {
-      const msg =
-        err.response?.data?.error ||
-        err.response?.data?.message ||
-        err.message ||
-        "Erreur de connexion. Veuillez réessayer.";
-      setError(msg);
-    } finally {
-      setIsLoading(false);
+
+// Login.jsx — replace handleSubmit with this
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setError("");
+  setIsLoading(true);
+  try {
+    const data = await loginEmployee(email, password);
+    const { employe, token } = data.data;
+
+    if (employe.role !== "admin") {
+      setError(
+        "Cette page est réservée aux administrateurs. Les employés doivent utiliser le portail employé."
+      );
+      return; // ← don't call login() at all for non-admins
     }
-  };
- 
+
+    login(employe, token);
+    navigate("/admin-dashboard");
+  } catch (err) {
+    const msg =
+      err.response?.data?.error ||
+      err.response?.data?.message ||
+      err.message ||
+      "Erreur de connexion. Veuillez réessayer.";
+    setError(msg);
+  } finally {
+    setIsLoading(false);
+  }
+};
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4">
       <div className="w-full max-w-sm bg-white rounded-2xl shadow-xl overflow-hidden">
@@ -64,39 +67,28 @@ const Login = () => {
             Système de Gestion de Roulement
           </p>
         </div>
- 
+
         <div className="px-6 pt-6 pb-8">
           <h2 className="text-xl font-bold text-gray-800 text-center mb-6">
             Espace Administrateur
           </h2>
- 
+
           {error && (
             <div className="bg-red-50 border border-red-300 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
               {error}
             </div>
           )}
- 
+
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Email field */}
+            {/* Email */}
             <div>
               <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
                 Email
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="w-4 h-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                    />
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
                 </span>
                 <input
@@ -110,27 +102,16 @@ const Login = () => {
                 />
               </div>
             </div>
- 
-            {/* Password field */}
+
+            {/* Mot de passe */}
             <div>
               <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
                 Mot de passe
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="w-4 h-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                    />
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   </svg>
                 </span>
                 <input
@@ -144,38 +125,29 @@ const Login = () => {
                 />
               </div>
             </div>
- 
-            {/* Submit button */}
+
             <button
               type="submit"
               disabled={isLoading}
               className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 mt-2 shadow-md shadow-indigo-200"
             >
               {isLoading ? (
-                "Connexion en cours..."
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Connexion en cours...
+                </>
               ) : (
                 <>
                   Se connecter
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="w-4 h-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M9 5l7 7-7 7"
-                    />
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                   </svg>
                 </>
               )}
             </button>
           </form>
- 
-          <div className="mt-6 text-center space-y-2">
+
+          <div className="mt-6 text-center">
             <div className="pt-4 border-t border-gray-200 w-full">
               <Link
                 to="/employe-login"
@@ -190,5 +162,5 @@ const Login = () => {
     </div>
   );
 };
- 
+
 export default Login;

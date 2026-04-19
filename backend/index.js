@@ -45,7 +45,8 @@ app.use('/ai', aiRoutes);
 app.use('/bus', busRoutes);
 app.use('/ligne', ligneRoutes);
 app.use('/stats', statsRoutes);
-
+ 
+app.use(errorHandler);
 //connect to database
 
 connectDB().then(() => {
@@ -53,11 +54,3 @@ connectDB().then(() => {
     console.log(`Server running on port ${process.env.PORT}`);
   });
 });
-
-
-app.use(errorHandler);
-//start server
-app.listen(process.env.PORT, () => {
-  console.log(`Example app listening on port ${process.env.PORT}`)
-})
-

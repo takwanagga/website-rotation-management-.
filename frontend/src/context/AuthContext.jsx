@@ -49,8 +49,10 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = useCallback((userData, token) => {
+    console.log("AuthContext.login called with:", userData, token);
     setUser(userData);
     if (token) localStorage.setItem("token", token);
+    console.log("Token saved to localStorage");
   }, []);
 
   const logout = useCallback(() => {
