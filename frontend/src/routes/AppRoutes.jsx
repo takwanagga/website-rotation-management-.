@@ -29,6 +29,7 @@ export default function AppRoutes() {
       <Route path="/login" element={<Login />} />
       <Route path="/employe-login" element={<EmployeLogin />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password/:token" element={<ResetPassword />} />
       <Route path="/unauthorized" element={<Unauthorized />} />
       <Route path="/planning" element={<PlanningQuotidien />} />
       <Route

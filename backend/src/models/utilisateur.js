@@ -2,13 +2,6 @@ import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import validator from 'validator';
 import crypto from 'crypto';
-
-/**
- * Modèle de base pour tous les utilisateurs (admin, chauffeur, receveur).
- * Utilise le discriminatorKey "__type" pour que Mongoose crée les sous-modèles
- * dans la MÊME collection MongoDB "utilisateurs".
- * Le champ "role" reste un champ métier normal (enum : admin, chauffeur, receveur).
- */
 const utilisateurSchema = new mongoose.Schema(
   {
     nom: {
@@ -75,22 +68,17 @@ const utilisateurSchema = new mongoose.Schema(
       min: 18,
       max: 65,
     },
-    resetPasswordToken:   { type: String, select: false },
-    resetPasswordExpires: { type: Date,   select: false },
+    resetPasswordToken:       { type: String,  select: false },
+    resetPasswordExpires:     { type: Date,    select: false },
   },
   {
     timestamps: true,
-    /**
-     * discriminatorKey : champ technique interne utilisé par Mongoose
-     * pour distinguer Admin et Employe dans la même collection.
-     * Ce champ est DIFFÉRENT du champ métier "role".
-     */
     discriminatorKey: '__type',
-    collection: 'employes', // garde la même collection qu'avant → pas de migration
+    collection: 'employes',
   }
  
 );
-// ── Hachage du mot de passe avant sauvegarde ──────────────────────────────────
+
 utilisateurSchema.pre('save', async function () {
   if (!this.isModified('MotDePasse')) return;
 
@@ -105,29 +93,17 @@ utilisateurSchema.pre('save', async function () {
   this.MotDePasse = await bcrypt.hash(this.MotDePasse, salt);
 });
 
-// comparer mot de passe
 utilisateurSchema.methods.comparePassword = async function (motDePasseCandidat) {
   return bcrypt.compare(motDePasseCandidat, this.MotDePasse);
 };
 
-// ── Méthode : générer un token de réinitialisation ───────────────────────────
 utilisateurSchema.methods.createResetPasswordToken = function () {
-  // Token brut envoyé par email (non stocké en DB)
   const resetToken = crypto.randomBytes(32).toString('hex');
- 
-  // Token haché stocké en DB
-  this.resetPasswordToken = crypto
-    .createHash('sha256')
-    .update(resetToken)
-    .digest('hex');
- 
-  // Expire dans 1 heure
+  this.resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
   this.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000);
- 
-  return resetToken; // retourne le token brut pour l'email
+  return resetToken;
 };
  
-// ── Masquer le mot de passe dans les réponses JSON ───────────────────────────
 utilisateurSchema.methods.toJSON = function () {
   const obj = this.toObject();
   delete obj.MotDePasse;

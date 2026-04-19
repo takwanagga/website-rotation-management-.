@@ -1,11 +1,8 @@
-// backend/utils/email.js
-// Chemin corrigé : depuis backend/utils/ vers backend/src/config/mailer.js
 import transporter from '../src/config/mailer.js';
 
 const APP_NAME = process.env.APP_NAME || 'TransRoute';
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 
-// ── Template HTML commun ──────────────────────────────────────────────────────
 const wrapHTML = (body) => `
 <!DOCTYPE html>
 <html lang="fr">
@@ -19,7 +16,6 @@ const wrapHTML = (body) => `
     .header { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); padding: 32px; text-align: center; }
     .header h1 { color: #fff; font-size: 26px; font-weight: 700; }
     .header p  { color: rgba(255,255,255,0.8); font-size: 13px; margin-top: 4px; }
-    .bus-icon  { font-size: 38px; margin-bottom: 10px; display: block; }
     .body  { padding: 32px; }
     .btn   { display: inline-block; background: #4f46e5; color: #fff !important; font-weight: 700; text-decoration: none; padding: 13px 30px; border-radius: 10px; margin: 18px 0; font-size: 15px; }
     .box   { background: #f7f8fc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 22px; margin: 20px 0; }
@@ -35,41 +31,36 @@ const wrapHTML = (body) => `
 <body>
   <div class="container">
     <div class="header">
-      <span class="bus-icon">🚌</span>
       <h1>${APP_NAME}</h1>
-      <p>Système de Gestion de Transport</p>
+      <p>Systeme de Gestion de Transport</p>
     </div>
     <div class="body">${body}</div>
     <div class="footer">
-      <p>Cet email a été envoyé automatiquement par ${APP_NAME}.<br/>Merci de ne pas répondre à cet email.</p>
+      <p>Cet email a ete envoye automatiquement par ${APP_NAME}.<br/>Merci de ne pas repondre a cet email.</p>
     </div>
   </div>
 </body>
 </html>`;
 
-// ── 1. Envoi des identifiants à un nouvel employé ─────────────────────────────
 export const sendEmployeeCredentials = async (email, password) => {
   const loginUrl = `${CLIENT_URL}/employe-login`;
 
-  // Fallback console si SMTP non configuré
   if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('📧  SMTP non configuré — identifiants à envoyer manuellement :');
-    console.log(`   Email        : ${email}`);
-    console.log(`   Mot de passe : ${password}`);
-    console.log(`   Lien         : ${loginUrl}`);
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('SMTP non configure - identifiants a envoyer manuellement :');
+    console.log(`Email        : ${email}`);
+    console.log(`Mot de passe : ${password}`);
+    console.log(`Lien         : ${loginUrl}`);
     return;
   }
 
   const html = wrapHTML(`
-    <p style="font-size:18px;font-weight:600;margin-bottom:12px">Bienvenue dans l'équipe ! 👋</p>
+    <p style="font-size:18px;font-weight:600;margin-bottom:12px">Bienvenue dans l'equipe !</p>
     <p style="font-size:15px;color:#4a5568;line-height:1.6;margin-bottom:20px">
-      Votre compte employé a été créé avec succès sur <strong>${APP_NAME}</strong>.
-      Voici vos identifiants de connexion pour accéder à votre espace personnel.
+      Votre compte employe a ete cree avec succes sur <strong>${APP_NAME}</strong>.
+      Voici vos identifiants de connexion pour acceder a votre espace personnel.
     </p>
     <div class="box">
-      <h3>🔐 Vos identifiants de connexion</h3>
+      <h3>Vos identifiants de connexion</h3>
       <div class="row">
         <span class="label">Adresse email</span>
         <span class="value">${email}</span>
@@ -80,94 +71,129 @@ export const sendEmployeeCredentials = async (email, password) => {
       </div>
     </div>
     <div style="text-align:center">
-      <a href="${loginUrl}" class="btn">Accéder à mon espace employé →</a>
+      <a href="${loginUrl}" class="btn">Acceder a mon espace employe</a>
     </div>
     <div class="note">
-      ⚠️ <strong>Important :</strong> Pour des raisons de sécurité, changez votre mot de passe
-      dès votre première connexion. Ne partagez jamais vos identifiants.
+      <strong>Important :</strong> Pour des raisons de securite, changez votre mot de passe
+      des votre premiere connexion. Ne partagez jamais vos identifiants.
     </div>
   `);
 
   await transporter.sendMail({
     from: `"${APP_NAME}" <${process.env.SMTP_USER}>`,
     to: email,
-    subject: `🚌 ${APP_NAME} — Vos identifiants de connexion`,
+    subject: `${APP_NAME} - Vos identifiants de connexion`,
     html,
   });
 
-  console.log(`📧 Identifiants envoyés à : ${email}`);
+  console.log(`Identifiants envoyes a : ${email}`);
 };
 
-// ── 2. Lien de réinitialisation du mot de passe ───────────────────────────────
 export const sendResetPasswordEmail = async (employe, resetToken) => {
   const resetUrl = `${CLIENT_URL}/reset-password/${resetToken}`;
 
   if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('📧  SMTP non configuré — lien de reset (valable 1h) :');
-    console.log(`   ${resetUrl}`);
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log(`SMTP non configure - lien de reset (valable 1h) : ${resetUrl}`);
     return;
   }
 
   const html = wrapHTML(`
-    <p style="font-size:18px;font-weight:600;margin-bottom:12px">Réinitialisation du mot de passe 🔑</p>
+    <p style="font-size:18px;font-weight:600;margin-bottom:12px">Reinitialisation du mot de passe</p>
     <p style="font-size:15px;color:#4a5568;line-height:1.6;margin-bottom:20px">
       Bonjour <strong>${employe.prenom} ${employe.nom}</strong>,<br/>
-      Nous avons reçu une demande de réinitialisation de votre mot de passe pour votre compte <strong>${APP_NAME}</strong>.
+      Nous avons recu une demande de reinitialisation de votre mot de passe pour votre compte <strong>${APP_NAME}</strong>.
       Cliquez sur le bouton ci-dessous pour choisir un nouveau mot de passe.
     </p>
     <div style="text-align:center">
-      <a href="${resetUrl}" class="btn">Réinitialiser mon mot de passe →</a>
+      <a href="${resetUrl}" class="btn">Reinitialiser mon mot de passe</a>
     </div>
     <div class="box">
-      <h3>🔗 Ou copiez ce lien dans votre navigateur</h3>
+      <h3>Ou copiez ce lien dans votre navigateur</h3>
       <div class="row">
         <span class="value">${resetUrl}</span>
       </div>
     </div>
     <div class="note">
-      ⏱️ Ce lien est valable <strong>1 heure</strong> seulement.
-      Si vous n'avez pas demandé cette réinitialisation, ignorez cet email —
-      votre mot de passe ne sera pas modifié.
+      Ce lien est valable <strong>1 heure</strong> seulement.
+      Si vous n'avez pas demande cette reinitialisation, ignorez cet email -
+      votre mot de passe ne sera pas modifie.
     </div>
   `);
 
   await transporter.sendMail({
     from: `"${APP_NAME}" <${process.env.SMTP_USER}>`,
     to: employe.email,
-    subject: `🔑 ${APP_NAME} — Réinitialisation de mot de passe`,
+    subject: `${APP_NAME} - Reinitialisation de mot de passe`,
     html,
   });
 
-  console.log(`📧 Lien de reset envoyé à : ${employe.email}`);
+  console.log(`Lien de reset envoye a : ${employe.email}`);
 };
 
-// ── 3. Notification de planning publié ────────────────────────────────────────
 export const sendPlanningNotification = async (email, nom, dateStr) => {
   const loginUrl = `${CLIENT_URL}/employe-login`;
 
   if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-    console.log(`📅  Planning publié pour ${email} (${dateStr})`);
+    console.log(`Planning publie pour ${email} (${dateStr})`);
     return;
   }
 
   const html = wrapHTML(`
-    <p style="font-size:18px;font-weight:600;margin-bottom:12px">Planning publié 📅</p>
+    <p style="font-size:18px;font-weight:600;margin-bottom:12px">Planning publie</p>
     <p style="font-size:15px;color:#4a5568;line-height:1.6;margin-bottom:20px">
       Bonjour <strong>${nom}</strong>,<br/>
-      Votre planning du <strong>${dateStr}</strong> vient d'être publié.
-      Connectez-vous à votre espace pour le consulter.
+      Votre planning du <strong>${dateStr}</strong> vient d'etre publie.
+      Connectez-vous a votre espace pour le consulter.
     </p>
     <div style="text-align:center">
-      <a href="${loginUrl}" class="btn">Voir mon planning →</a>
+      <a href="${loginUrl}" class="btn">Voir mon planning</a>
     </div>
   `);
 
   await transporter.sendMail({
     from: `"${APP_NAME}" <${process.env.SMTP_USER}>`,
     to: email,
-    subject: `📅 ${APP_NAME} — Votre planning du ${dateStr} est disponible`,
+    subject: `${APP_NAME} - Votre planning du ${dateStr} est disponible`,
     html,
   });
+};
+
+export const sendVerificationEmail = async (utilisateur, verificationToken) => {
+  const verifyUrl = `${CLIENT_URL}/verify-email/${verificationToken}`;
+
+  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    console.log(`Lien de verification email (valable 24h) : ${verifyUrl}`);
+    return;
+  }
+
+  const html = wrapHTML(`
+    <p style="font-size:18px;font-weight:600;margin-bottom:12px">Verifiez votre adresse email</p>
+    <p style="font-size:15px;color:#4a5568;line-height:1.6;margin-bottom:20px">
+      Bonjour <strong>${utilisateur.prenom} ${utilisateur.nom}</strong>,<br/>
+      Votre compte <strong>${APP_NAME}</strong> a ete cree avec succes.
+      Cliquez sur le bouton ci-dessous pour activer votre compte.
+    </p>
+    <div style="text-align:center">
+      <a href="${verifyUrl}" class="btn">Activer mon compte</a>
+    </div>
+    <div class="box">
+      <h3>Ou copiez ce lien dans votre navigateur</h3>
+      <div class="row">
+        <span class="value">${verifyUrl}</span>
+      </div>
+    </div>
+    <div class="note">
+      Ce lien est valable <strong>24 heures</strong>.
+      Si vous n'avez pas cree ce compte, ignorez cet email.
+    </div>
+  `);
+
+  await transporter.sendMail({
+    from: `"${APP_NAME}" <${process.env.SMTP_USER}>`,
+    to: utilisateur.email,
+    subject: `${APP_NAME} - Activez votre compte`,
+    html,
+  });
+
+  console.log(`Email de verification envoye a : ${utilisateur.email}`);
 };

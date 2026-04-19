@@ -11,7 +11,6 @@ const Login = () => {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-// Login.jsx — replace handleSubmit with this
 const handleSubmit = async (e) => {
   e.preventDefault();
   setError("");
@@ -22,9 +21,9 @@ const handleSubmit = async (e) => {
 
     if (employe.role !== "admin") {
       setError(
-        "Cette page est réservée aux administrateurs. Les employés doivent utiliser le portail employé."
+        "Cette page est reservee aux administrateurs. Les employes doivent utiliser le portail employe."
       );
-      return; // ← don't call login() at all for non-admins
+      return;
     }
 
     login(employe, token);
@@ -34,7 +33,7 @@ const handleSubmit = async (e) => {
       err.response?.data?.error ||
       err.response?.data?.message ||
       err.message ||
-      "Erreur de connexion. Veuillez réessayer.";
+      "Erreur de connexion. Veuillez reessayer.";
     setError(msg);
   } finally {
     setIsLoading(false);
@@ -145,6 +144,15 @@ const handleSubmit = async (e) => {
                 </>
               )}
             </button>
+
+            <div className="text-right mt-1">
+              <Link
+                to="/forgot-password"
+                className="text-xs text-indigo-600 hover:text-indigo-800 transition"
+              >
+                Mot de passe oublié ?
+              </Link>
+            </div>
           </form>
 
           <div className="mt-6 text-center">

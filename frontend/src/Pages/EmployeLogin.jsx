@@ -32,7 +32,7 @@ export default function EmployeLogin() {
       }
     } catch (err) {
       setError(
-        err.response?.data?.message || err.response?.data?.error || "Erreur lors de la connexion. Veuillez réessayer."
+        err.response?.data?.message || err.response?.data?.error || "Erreur lors de la connexion. Veuillez reessayer."
       );
     } finally {
       setLoading(false);

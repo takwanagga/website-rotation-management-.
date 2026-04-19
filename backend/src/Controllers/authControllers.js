@@ -1,4 +1,3 @@
-// backend/src/Controllers/authControllers.js
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import Utilisateur from '../models/utilisateur.js';
@@ -12,7 +11,7 @@ if (!JWT_SECRET) throw new Error("JWT_SECRET manquant dans les variables d'envir
 function getErrorMessage(error) {
   if (error?.name === 'ValidationError')
     return Object.values(error.errors).map((e) => e.message).join(', ');
-  if (error?.code === 11000) return 'Valeur déjà utilisée (email ou mécano).';
+  if (error?.code === 11000) return 'Valeur deja utilisee (email ou mecano).';
   return error?.message || 'Une erreur est survenue.';
 }
 
@@ -31,23 +30,19 @@ function setTokenCookie(res, utilisateur) {
   return token;
 }
 
-// ── Inscription ───────────────────────────────────────────────────────────────
 export async function signupEmploye(req, res, next) {
   try {
     const { nom, prenom, mecano, localisation, email, role, telephone, MotDePasse, age } = req.body;
-
     const Model = role === 'admin' ? Admin : Employe;
     const utilisateur = await Model.create({ nom, prenom, mecano, localisation, email, role, telephone, MotDePasse, age });
-
     const token = setTokenCookie(res, utilisateur);
-    return res.status(201).json({ message: 'Compte créé avec succès.', employe: utilisateur, token });
+    return res.status(201).json({ message: 'Compte cree avec succes.', employe: utilisateur, token });
   } catch (error) {
-    console.error(error); 
-    return res.status(400).json({ error: error.message }); 
-}
+    console.error(error);
+    return res.status(400).json({ error: error.message });
+  }
 }
 
-// ── Connexion ─────────────────────────────────────────────────────────────────
 export async function loginEmploye(req, res) {
   try {
     const { email, MotDePasse } = req.body;
@@ -60,19 +55,17 @@ export async function loginEmploye(req, res) {
     if (!isMatch) return res.status(401).json({ error: 'Identifiants invalides.' });
 
     const token = setTokenCookie(res, utilisateur);
-    return res.status(200).json({ message: 'Connexion réussie.', employe: utilisateur, token });
+    return res.status(200).json({ message: 'Connexion reussie.', employe: utilisateur, token });
   } catch (error) {
     return res.status(500).json({ error: getErrorMessage(error) });
   }
 }
 
-// ── Déconnexion ───────────────────────────────────────────────────────────────
 export async function logoutEmploye(req, res) {
   res.clearCookie('token');
-  return res.status(200).json({ message: 'Déconnexion réussie.' });
+  return res.status(200).json({ message: 'Deconnexion reussie.' });
 }
 
-// ── Profil ────────────────────────────────────────────────────────────────────
 export async function getProfile(req, res) {
   try {
     const utilisateur = await Utilisateur.findById(req.employe._id);
@@ -83,26 +76,24 @@ export async function getProfile(req, res) {
   }
 }
 
-// ── Mise à jour du profil ─────────────────────────────────────────────────────
 export async function updateProfile(req, res) {
   try {
     const utilisateur = await Utilisateur.findById(req.employe._id);
     if (!utilisateur) return res.status(404).json({ error: 'Utilisateur introuvable.' });
 
-    const champsAutorisés = ['nom', 'prenom', 'email', 'telephone', 'localisation', 'age'];
-    for (const champ of champsAutorisés) {
+    const champsAutorises = ['nom', 'prenom', 'email', 'telephone', 'localisation', 'age'];
+    for (const champ of champsAutorises) {
       if (req.body[champ] !== undefined) utilisateur[champ] = req.body[champ];
     }
     if (req.body.MotDePasse) utilisateur.MotDePasse = req.body.MotDePasse;
 
     await utilisateur.save();
-    return res.status(200).json({ message: 'Profil mis à jour avec succès.', employe: utilisateur });
+    return res.status(200).json({ message: 'Profil mis a jour avec succes.', employe: utilisateur });
   } catch (error) {
     return res.status(400).json({ error: getErrorMessage(error) });
   }
 }
 
-// ── Vérification du token ─────────────────────────────────────────────────────
 export async function verifyToken(req, res) {
   try {
     const token = req.cookies?.token || req.headers.authorization?.split(' ')[1];
@@ -115,12 +106,11 @@ export async function verifyToken(req, res) {
     return res.status(200).json({ success: true, user: utilisateur });
   } catch (error) {
     if (error.name === 'TokenExpiredError')
-      return res.status(401).json({ success: false, error: 'Session expirée.' });
+      return res.status(401).json({ success: false, error: 'Session expiree.' });
     return res.status(401).json({ success: false, error: 'Jeton invalide.' });
   }
 }
 
-// ── Mot de passe oublié — génère un token et envoie l'email ──────────────────
 export async function forgotPassword(req, res) {
   try {
     const { email } = req.body;
@@ -128,38 +118,29 @@ export async function forgotPassword(req, res) {
 
     const utilisateur = await Utilisateur.findOne({ email: String(email).toLowerCase() });
 
-    // Réponse générique pour ne pas révéler si l'email existe
     if (!utilisateur) {
-      return res.status(200).json({
-        message: 'Si cet email est enregistré, un lien de réinitialisation a été envoyé.',
-      });
+      return res.status(200).json({ message: 'Si cet email est enregistre, un lien de reinitialisation a ete envoye.' });
     }
 
-    // Génère le token et sauvegarde le hash en DB
     const resetToken = utilisateur.createResetPasswordToken();
     await utilisateur.save({ validateBeforeSave: false });
 
-    // Envoie l'email
     try {
       await sendResetPasswordEmail(utilisateur, resetToken);
     } catch (emailErr) {
-      // En cas d'erreur d'envoi, efface le token pour ne pas bloquer l'utilisateur
       utilisateur.resetPasswordToken = undefined;
       utilisateur.resetPasswordExpires = undefined;
       await utilisateur.save({ validateBeforeSave: false });
       console.error('Erreur envoi email reset:', emailErr.message);
-      return res.status(500).json({ error: "Erreur lors de l'envoi de l'email. Réessayez plus tard." });
+      return res.status(500).json({ error: "Erreur lors de l'envoi de l'email. Reessayez plus tard." });
     }
 
-    return res.status(200).json({
-      message: 'Si cet email est enregistré, un lien de réinitialisation a été envoyé.',
-    });
+    return res.status(200).json({ message: 'Si cet email est enregistre, un lien de reinitialisation a ete envoye.' });
   } catch (error) {
     return res.status(500).json({ error: getErrorMessage(error) });
   }
 }
 
-// ── Réinitialisation du mot de passe avec le token reçu par email ────────────
 export async function resetPassword(req, res) {
   try {
     const { password } = req.body;
@@ -168,13 +149,8 @@ export async function resetPassword(req, res) {
       return res.status(400).json({ error: 'Le nouveau mot de passe est requis.' });
     }
 
-    // Hache le token reçu en URL pour le comparer avec celui stocké en DB
-    const hashedToken = crypto
-      .createHash('sha256')
-      .update(req.params.token)
-      .digest('hex');
+    const hashedToken = crypto.createHash('sha256').update(req.params.token).digest('hex');
 
-    // Cherche l'utilisateur avec ce token valide (non expiré)
     const utilisateur = await Utilisateur.findOne({
       resetPasswordToken: hashedToken,
       resetPasswordExpires: { $gt: Date.now() },
@@ -182,20 +158,18 @@ export async function resetPassword(req, res) {
 
     if (!utilisateur) {
       return res.status(400).json({
-        error: 'Le lien de réinitialisation est invalide ou a expiré. Veuillez refaire une demande.',
+        error: 'Le lien de reinitialisation est invalide ou a expire. Veuillez refaire une demande.',
       });
     }
 
-    // Met à jour le mot de passe (le pre-save hook hash automatiquement)
     utilisateur.MotDePasse = password;
     utilisateur.resetPasswordToken = undefined;
     utilisateur.resetPasswordExpires = undefined;
     await utilisateur.save();
 
-    // Connecte automatiquement l'utilisateur après le reset
     const token = setTokenCookie(res, utilisateur);
     return res.status(200).json({
-      message: 'Mot de passe réinitialisé avec succès.',
+      message: 'Mot de passe reinitialise avec succes.',
       token,
       role: utilisateur.role,
     });
