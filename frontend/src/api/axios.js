@@ -27,11 +27,16 @@ instance.interceptors.response.use(
     const isPublicAuth =
       url.includes("/auth/login") ||
       url.includes("/auth/signup") ||
-      url.includes("/auth/forgot-password");
+      url.includes("/auth/forgot-password") ||
+      url.includes("/auth/verify");
     if (status === 401 && !isPublicAuth) {
       localStorage.removeItem("token");
       if (!window.location.pathname.startsWith("/login")) {
-        window.location.href = "/login";
+         // Dispatch a custom event so AuthContext can react cleanly
+        window.dispatchEvent(new CustomEvent("auth:logout"));
+        // Use history API to avoid full page reload
+        window.history.pushState({}, "", "/login");
+        window.dispatchEvent(new PopStateEvent("popstate"));
       }
     }
     return Promise.reject(error);

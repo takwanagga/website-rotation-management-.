@@ -10,23 +10,38 @@ if (!JWT_SECRET) {
 //  vérifie le token + cherche l'employé en DB 
 export const authenticate = async (req, res, next) => {
   try {
-    const token = req.cookies?.token || req.headers.authorization?.split(' ')[1];
+    const cookieToken = req.cookies?.token;
+    const authHeader = req.headers.authorization;
+    const headerToken = authHeader?.split(' ')[1];
+    const token = cookieToken || headerToken;
+
+    console.log('Auth debug: cookie token exists:', !!cookieToken, '| header auth:', authHeader?.substring(0, 20) + '...');
+    console.log('Auth debug: URL:', req.originalUrl, '| Method:', req.method);
+    console.log('Auth debug: Final token exists:', !!token, '| token length:', token?.length);
 
     if (!token) {
+      console.log('Auth debug: No token found, rejecting');
       return res.status(401).json({ message: 'Jeton manquant, accès refusé.' });
     }
 
+    console.log('Auth debug: Verifying token with JWT_SECRET...');
     const decoded = jwt.verify(token, JWT_SECRET);
+    console.log('Auth debug: Token decoded, user ID:', decoded.id);
 
     const utilisateur = await Utilisateur.findById(decoded.id).select('-MotDePasse');
+    console.log('Auth debug: User found:', !!utilisateur);
 
-    if (!employe) {
+    if (!utilisateur) {
+      console.log('Auth debug: User not found in DB');
       return res.status(401).json({ message: 'Compte introuvable ou supprimé.' });
     }
-    req.employe = employe;
+    req.employe = utilisateur;
+    console.log('Auth debug: Auth successful for user:', utilisateur.email);
     next();
 
   } catch (error) {
+    console.error('Auth middleware error:', error.name, error.message);
+    console.error('Auth middleware: Token verification failed');
     if (error.name === 'TokenExpiredError') {
       return res.status(401).json({ message: 'Session expirée, reconnectez-vous.' });
     }
