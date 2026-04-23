@@ -34,7 +34,10 @@ import busRoutes from './src/Routes/bus.js';
 import ligneRoutes from './src/Routes/ligne.js';
 import aiRoutes from './src/Routes/ai.js';
 import statsRoutes from './src/Routes/stats.js';
+<<<<<<< HEAD
 import settingsRoutes from './src/Routes/settings.js';
+=======
+>>>>>>> a49756bd5b0272b7aa8892ab327a7c1a3b40d74a
 
 
 //routes
@@ -46,7 +49,10 @@ app.use('/ai', aiRoutes);
 app.use('/bus', busRoutes);
 app.use('/ligne', ligneRoutes);
 app.use('/stats', statsRoutes);
+<<<<<<< HEAD
 app.use('/settings', settingsRoutes);
+=======
+>>>>>>> a49756bd5b0272b7aa8892ab327a7c1a3b40d74a
  
 app.use(errorHandler);
 //connect to database

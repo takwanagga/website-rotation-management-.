@@ -14,19 +14,10 @@ import Unauthorized from "../Pages/Unauthorized.jsx";
 import PrivateRoutes from "./PrivateRoutes.jsx";
 import RoleBaseRoutes from "./RoleBaseRoutes.jsx";
 import MonPlanning from "../Pages/MonPlanning.jsx";
-
 function AdminLayout({ children }) {
   return (
     <PrivateRoutes>
       <RoleBaseRoutes allowedRoles={["admin"]}>{children}</RoleBaseRoutes>
-    </PrivateRoutes>
-  );
-}
-
-function EmployeeLayout({ children }) {
-  return (
-    <PrivateRoutes>
-      <RoleBaseRoutes allowedRoles={["chauffeur", "receveur"]}>{children}</RoleBaseRoutes>
     </PrivateRoutes>
   );
 }
@@ -40,45 +31,66 @@ export default function AppRoutes() {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password/:token" element={<ResetPassword />} />
       <Route path="/unauthorized" element={<Unauthorized />} />
-
-      {/* ── Admin routes ── */}
+      <Route path="/planning" element={<PlanningQuotidien />} />
       <Route
         path="/admin-dashboard"
-        element={<AdminLayout><AdminDashboard /></AdminLayout>}
-      />
-      <Route
-        path="/planning"
-        element={<AdminLayout><PlanningQuotidien /></AdminLayout>}
+        element={
+          <AdminLayout>
+            <AdminDashboard />
+          </AdminLayout>
+        }
       />
       <Route
         path="/employees"
-        element={<AdminLayout><Employees /></AdminLayout>}
+        element={
+          <AdminLayout>
+            <Employees />
+          </AdminLayout>
+        }
       />
       <Route
         path="/buses"
-        element={<AdminLayout><Buses /></AdminLayout>}
+        element={
+          <AdminLayout>
+            <Buses />
+          </AdminLayout>
+        }
       />
       <Route
         path="/lignes"
-        element={<AdminLayout><Lignes /></AdminLayout>}
+        element={
+          <AdminLayout>
+            <Lignes />
+          </AdminLayout>
+        }
       />
       <Route
         path="/admin-profile"
-        element={<AdminLayout><AdminProfile /></AdminLayout>}
+        element={
+          <AdminLayout>
+            <AdminProfile />
+          </AdminLayout>
+        }
       />
       <Route
         path="/settings"
-        element={<AdminLayout><Settings /></AdminLayout>}
+        element={
+          <AdminLayout>
+            <Settings />
+          </AdminLayout>
+        }
       />
-
-      {/* ── Employee routes ── */}
-      <Route
-        path="/mon-planning"
-        element={<EmployeeLayout><MonPlanning /></EmployeeLayout>}
-      />
-
-      {/* ── Fallback ── */}
       <Route path="*" element={<Navigate to="/login" replace />} />
+      <Route
+  path="/mon-planning"
+  element={
+    <PrivateRoutes>
+      <RoleBaseRoutes allowedRoles={["chauffeur", "receveur"]}>
+        <MonPlanning />
+      </RoleBaseRoutes>
+    </PrivateRoutes>
+  }
+/>
     </Routes>
   );
 }

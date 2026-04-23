@@ -9,7 +9,10 @@ import {
   FileText,
   CheckCircle2,
   AlertTriangle,
+<<<<<<< HEAD
   Calendar,
+=======
+>>>>>>> a49756bd5b0272b7aa8892ab327a7c1a3b40d74a
 } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
 import { employeeService } from "../services/employeeService.js";
@@ -38,6 +41,7 @@ const HEURES = [
   "20:00-22:00",
 ];
 
+<<<<<<< HEAD
 const JOURS_SEMAINE = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
 // ── Date helpers ── FIXED: use local timezone, NOT UTC ────────────────────────
@@ -54,6 +58,27 @@ function isSameDate(d1, d2) {
     d1.getMonth() === d2.getMonth() &&
     d1.getDate() === d2.getDate()
   );
+=======
+// ── Date helpers ──────────────────────────────────────────────────────────────
+function getCalendarDays(centerDate) {
+  const dates = [];
+  const center = new Date(centerDate);
+  center.setHours(0, 0, 0, 0);
+  for (let i = -7; i <= 7; i++) {
+    const d = new Date(center);
+    d.setDate(center.getDate() + i);
+    dates.push(d);
+  }
+  return dates;
+}
+
+function formatDateKey(date) {
+  return date.toISOString().split("T")[0];
+}
+
+function isSameDate(d1, d2) {
+  return formatDateKey(d1) === formatDateKey(d2);
+>>>>>>> a49756bd5b0272b7aa8892ab327a7c1a3b40d74a
 }
 
 function parseHeureRange(heureRange) {
@@ -61,6 +86,7 @@ function parseHeureRange(heureRange) {
   return { heuredebut: start, heurefin: end };
 }
 
+<<<<<<< HEAD
 // ── Calendar helpers (Google Calendar style) ──────────────────────────────────
 function getMonthCalendarWeeks(year, month) {
   const weeks = [];
@@ -95,6 +121,8 @@ function getMonthName(month) {
   return names[month];
 }
 
+=======
+>>>>>>> a49756bd5b0272b7aa8892ab327a7c1a3b40d74a
 // ── Conflict check ────────────────────────────────────────────────────────────
 function validateConflict({ assignments, dateKey, heure, ligneId, item, currentKey }) {
   const duplicate = Object.entries(assignments).find(([key, value]) => {
@@ -124,11 +152,15 @@ export default function PlanningQuotidien() {
   const { user } = useAuth();
 
   const [dragging, setDragging]             = useState(null);
+<<<<<<< HEAD
   const [selectedDate, setSelectedDate]     = useState(() => {
     const now = new Date();
     now.setHours(0, 0, 0, 0);
     return now;
   });
+=======
+  const [selectedDate, setSelectedDate]     = useState(() => new Date());
+>>>>>>> a49756bd5b0272b7aa8892ab327a7c1a3b40d74a
   const [assignments, setAssignments]       = useState({});
   const [conflicts, setConflicts]           = useState([]);
   const [loading, setLoading]               = useState(true);
@@ -145,6 +177,7 @@ export default function PlanningQuotidien() {
   const [receveurs, setReceveurs]   = useState([]);
   const [buses, setBuses]           = useState([]);
 
+<<<<<<< HEAD
   // Calendar state
   const [calendarMonth, setCalendarMonth] = useState(() => new Date().getMonth());
   const [calendarYear, setCalendarYear]   = useState(() => new Date().getFullYear());
@@ -153,6 +186,9 @@ export default function PlanningQuotidien() {
     () => getMonthCalendarWeeks(calendarYear, calendarMonth),
     [calendarYear, calendarMonth]
   );
+=======
+  const calendarDays = useMemo(() => getCalendarDays(selectedDate), [selectedDate]);
+>>>>>>> a49756bd5b0272b7aa8892ab327a7c1a3b40d74a
 
   const displayName =
     [user?.prenom, user?.nom].filter(Boolean).join(" ").trim() ||
@@ -234,7 +270,11 @@ export default function PlanningQuotidien() {
             savedMap[`${slotKey}__driver`] = p._id;
           }
 
+<<<<<<< HEAD
           // ── Receveur ──
+=======
+          // ── Receveur ──  ← was missing!
+>>>>>>> a49756bd5b0272b7aa8892ab327a7c1a3b40d74a
           if (p.receveur) {
             newAssignments[`${slotKey}__receveur`] = {
               ...p.receveur,
@@ -406,7 +446,11 @@ export default function PlanningQuotidien() {
     }
   };
 
+<<<<<<< HEAD
   // ── Save Draft ──────────────────────────────────────────────────────────────
+=======
+  // ── Save Draft — FIXED: groups by slot and includes receveur ────────────────
+>>>>>>> a49756bd5b0272b7aa8892ab327a7c1a3b40d74a
   const handleSaveDraft = async () => {
     try {
       setSavingDraft(true);
@@ -434,6 +478,10 @@ export default function PlanningQuotidien() {
       for (const [slotKey, slot] of Object.entries(slotMap)) {
         const { dateKey, heure, ligneId, bus, driver, receveur } = slot;
 
+<<<<<<< HEAD
+=======
+        // Only save slots that are fully assigned (bus + chauffeur + receveur)
+>>>>>>> a49756bd5b0272b7aa8892ab327a7c1a3b40d74a
         if (!bus?.busId || !driver?.employeeId || !receveur?.employeeId) continue;
 
         const { heuredebut, heurefin } = parseHeureRange(heure);
@@ -444,7 +492,11 @@ export default function PlanningQuotidien() {
           ligne:     ligneId,
           bus:       bus.busId,
           employe:   driver.employeeId,
+<<<<<<< HEAD
           receveur:  receveur.employeeId,
+=======
+          receveur:  receveur.employeeId,   // ← was missing in original code!
+>>>>>>> a49756bd5b0272b7aa8892ab327a7c1a3b40d74a
         };
 
         try {
@@ -460,6 +512,10 @@ export default function PlanningQuotidien() {
           }
 
           if (id) {
+<<<<<<< HEAD
+=======
+            // Map all three sub-keys to the same DB document id
+>>>>>>> a49756bd5b0272b7aa8892ab327a7c1a3b40d74a
             nextPlanningMap[`${slotKey}__bus`]      = id;
             nextPlanningMap[`${slotKey}__driver`]   = id;
             nextPlanningMap[`${slotKey}__receveur`] = id;
@@ -502,6 +558,10 @@ export default function PlanningQuotidien() {
       setPublishing(true);
       await Promise.all(ids.map((id) => publishPlanningById(id, true)));
 
+<<<<<<< HEAD
+=======
+      // Notify all assigned employees
+>>>>>>> a49756bd5b0272b7aa8892ab327a7c1a3b40d74a
       const employeeIds = new Set();
       Object.entries(assignments).forEach(([key, val]) => {
         if (key.startsWith(selectedDateKey) && val.employeeId) {
@@ -529,6 +589,7 @@ export default function PlanningQuotidien() {
     }
   };
 
+<<<<<<< HEAD
   // ── Calendar navigation ────────────────────────────────────────────────────
   const handlePrevMonth = () => {
     if (calendarMonth === 0) {
@@ -572,6 +633,8 @@ export default function PlanningQuotidien() {
     return counts;
   }, [assignments]);
 
+=======
+>>>>>>> a49756bd5b0272b7aa8892ab327a7c1a3b40d74a
   // ── Loading ─────────────────────────────────────────────────────────────────
   if (loading) {
     return (
@@ -588,8 +651,11 @@ export default function PlanningQuotidien() {
   }
 
   const dateKey = formatDateKey(selectedDate);
+<<<<<<< HEAD
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+=======
+>>>>>>> a49756bd5b0272b7aa8892ab327a7c1a3b40d74a
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
@@ -617,6 +683,10 @@ export default function PlanningQuotidien() {
               Exporter PDF
             </button>
 
+<<<<<<< HEAD
+=======
+            {/* ← Real NotificationBell (admin's own notifications) */}
+>>>>>>> a49756bd5b0272b7aa8892ab327a7c1a3b40d74a
             <NotificationBell />
 
             <div className="flex items-center gap-2 pl-2 border-l border-gray-200">
@@ -680,6 +750,7 @@ export default function PlanningQuotidien() {
             </button>
           </div>
 
+<<<<<<< HEAD
           {/* ── Google Calendar Style Monthly View ── */}
           <div className="bg-white border border-gray-200 rounded-2xl shadow-sm mb-5 overflow-hidden">
             {/* Calendar header */}
@@ -761,6 +832,54 @@ export default function PlanningQuotidien() {
                   })}
                 </div>
               ))}
+=======
+          {/* ── Date navigator ── */}
+          <div className="bg-white border border-gray-200 rounded-xl p-3 mb-5 shadow-sm">
+            <div className="flex items-center gap-2 overflow-x-auto">
+              <button
+                onClick={() => { const d = new Date(selectedDate); d.setDate(d.getDate() - 1); setSelectedDate(d); }}
+                className="p-1.5 rounded-lg hover:bg-gray-100 flex-shrink-0"
+              >
+                <ChevronLeft size={18} />
+              </button>
+
+              {calendarDays.map((date) => {
+                const sel     = isSameDate(date, selectedDate);
+                const isToday = isSameDate(date, new Date());
+                return (
+                  <button
+                    key={formatDateKey(date)}
+                    onClick={() => setSelectedDate(date)}
+                    className={`min-w-[56px] px-2 py-2 rounded-lg text-center transition flex-shrink-0 relative ${
+                      sel
+                        ? "bg-indigo-600 text-white shadow-md"
+                        : "hover:bg-gray-50 text-gray-600"
+                    }`}
+                  >
+                    <div className="text-xs uppercase">
+                      {date.toLocaleDateString("fr-FR", { weekday: "short" })}
+                    </div>
+                    <div className="text-sm font-bold mt-0.5">
+                      {date.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" })}
+                    </div>
+                    {/* Today indicator */}
+                    {isToday && !sel && (
+                      <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-indigo-500 rounded-full" />
+                    )}
+                    {isToday && sel && (
+                      <div className="text-[9px] text-indigo-200 font-semibold mt-0.5">Aujourd'hui</div>
+                    )}
+                  </button>
+                );
+              })}
+
+              <button
+                onClick={() => { const d = new Date(selectedDate); d.setDate(d.getDate() + 1); setSelectedDate(d); }}
+                className="p-1.5 rounded-lg hover:bg-gray-100 flex-shrink-0"
+              >
+                <ChevronRight size={18} />
+              </button>
+>>>>>>> a49756bd5b0272b7aa8892ab327a7c1a3b40d74a
             </div>
           </div>
 
@@ -771,7 +890,11 @@ export default function PlanningQuotidien() {
               <span className="text-indigo-600">
                 {selectedDate.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
               </span>
+<<<<<<< HEAD
               {isSameDate(selectedDate, today) && (
+=======
+              {isSameDate(selectedDate, new Date()) && (
+>>>>>>> a49756bd5b0272b7aa8892ab327a7c1a3b40d74a
                 <span className="ml-2 text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-semibold align-middle">
                   Aujourd'hui
                 </span>
