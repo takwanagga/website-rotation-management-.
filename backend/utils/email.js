@@ -89,7 +89,6 @@ export const sendEmployeeCredentials = async (email, password) => {
   console.log(`Identifiants envoyes a : ${email}`);
 };
 
-<<<<<<< HEAD
 export const sendPasswordChangedEmail = async (email, newPassword) => {
   const loginUrl = `${CLIENT_URL}/employe-login`;
 
@@ -138,8 +137,6 @@ export const sendPasswordChangedEmail = async (email, newPassword) => {
   console.log(`Notification changement MDP envoyee a : ${email}`);
 };
 
-=======
->>>>>>> a49756bd5b0272b7aa8892ab327a7c1a3b40d74a
 export const sendResetPasswordEmail = async (employe, resetToken) => {
   const resetUrl = `${CLIENT_URL}/reset-password/${resetToken}`;
 

@@ -1,11 +1,9 @@
 import Planning from '../models/planning.js';
-<<<<<<< HEAD
 import Employe from '../models/employe.js';
 import Bus from '../models/bus.js';
 import Ligne from '../models/ligne.js';
 
 // ── Helper: split a time slot into day and night hours ──────────────────────
-// Day = 05:00–20:00, Night = 20:00–05:00
 function splitDayNight(heuredebut, heurefin) {
   const DAY_START = 5;
   const DAY_END = 20;
@@ -41,31 +39,23 @@ export async function getAdminStats(req, res) {
     plannings.forEach(p => {
       const { dayHours, nightHours } = splitDayNight(p.heuredebut, p.heurefin);
 
-      if (p.employe && p.employe._id) {
-        const eId = p.employe._id.toString();
-        if (!workHours[eId]) {
-          workHours[eId] = {
-            nom: p.employe.nom, prenom: p.employe.prenom,
-            role: p.employe.role, hours: 0, dayHours: 0, nightHours: 0,
-          };
+      const processPerson = (person) => {
+        if (person && person._id) {
+          const id = person._id.toString();
+          if (!workHours[id]) {
+            workHours[id] = {
+              nom: person.nom, prenom: person.prenom,
+              role: person.role, hours: 0, dayHours: 0, nightHours: 0,
+            };
+          }
+          workHours[id].hours += dayHours + nightHours;
+          workHours[id].dayHours += dayHours;
+          workHours[id].nightHours += nightHours;
         }
-        workHours[eId].hours += dayHours + nightHours;
-        workHours[eId].dayHours += dayHours;
-        workHours[eId].nightHours += nightHours;
-      }
+      };
 
-      if (p.receveur && p.receveur._id) {
-        const rId = p.receveur._id.toString();
-        if (!workHours[rId]) {
-          workHours[rId] = {
-            nom: p.receveur.nom, prenom: p.receveur.prenom,
-            role: p.receveur.role, hours: 0, dayHours: 0, nightHours: 0,
-          };
-        }
-        workHours[rId].hours += dayHours + nightHours;
-        workHours[rId].dayHours += dayHours;
-        workHours[rId].nightHours += nightHours;
-      }
+      processPerson(p.employe);
+      processPerson(p.receveur);
     });
 
     // ── Resource status counts ──
@@ -98,7 +88,7 @@ export async function getAdminStats(req, res) {
     // ── Planning coverage (last 7 days) ──
     const coverageData = [];
     const activeLinesCount = lineStatus.actif || 1;
-    const slotsPerDay = 8; // 8 time slots per day
+    const slotsPerDay = 8; 
 
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
@@ -127,7 +117,7 @@ export async function getAdminStats(req, res) {
   }
 }
 
-// ── GET /stats/employee-hours/:employeeId — Per-employee day/night breakdown ─
+// ── GET /stats/employee-hours/:employeeId ────────────────────────────────────
 export async function getEmployeeWorkHours(req, res) {
   try {
     const { employeeId } = req.params;
@@ -139,17 +129,14 @@ export async function getEmployeeWorkHours(req, res) {
     };
 
     if (start && end) {
-      const startDate = new Date(start);
-      const endDate = new Date(end);
-      endDate.setHours(23, 59, 59, 999);
-      filter.date = { $gte: startDate, $lte: endDate };
+      filter.date = { $gte: new Date(start), $lte: new Date(end) };
+      filter.date.$lte.setHours(23, 59, 59, 999);
     }
 
     const plannings = await Planning.find(filter)
       .populate('ligne bus employe receveur')
       .sort({ date: 1, heuredebut: 1 });
 
-    // Group by date
     const dailyBreakdown = {};
     let totalDay = 0;
     let totalNight = 0;
@@ -160,11 +147,7 @@ export async function getEmployeeWorkHours(req, res) {
 
       if (!dailyBreakdown[dateKey]) {
         dailyBreakdown[dateKey] = {
-          date: dateKey,
-          dayHours: 0,
-          nightHours: 0,
-          totalHours: 0,
-          slots: [],
+          date: dateKey, dayHours: 0, nightHours: 0, totalHours: 0, slots: [],
         };
       }
 
@@ -197,48 +180,5 @@ export async function getEmployeeWorkHours(req, res) {
   }
 }
 
+// Ensure you only have ONE default export at the very end
 export default { getAdminStats, getEmployeeWorkHours };
-=======
-
-export async function getAdminStats(req, res) {
-    try {
-        // Here we sum hours from published plannings per employee for a time range
-        // For simplicity, we just calculate for all time unless query params exist
-        // Currently each slot is 2 hours (per aiControleers.js logic). We can calculate based on heuredebut/heurefin theoretically, but let's just count plannings * 2 for now, or actually parse hr.
-        
-        const filter = { publie: true };
-        const plannings = await Planning.find(filter).populate('employe receveur');
-        
-        const workHours = {};
-
-        plannings.forEach(p => {
-            const startH = parseInt(p.heuredebut.split(':')[0], 10);
-            const endH = parseInt(p.heurefin.split(':')[0], 10);
-            const diff = endH - startH;
-
-            if (p.employe && p.employe._id) {
-                const eId = p.employe._id.toString();
-                if (!workHours[eId]) {
-                    workHours[eId] = { nom: p.employe.nom, prenom: p.employe.prenom, role: p.employe.role, hours: 0 };
-                }
-                workHours[eId].hours += diff;
-            }
-
-            if (p.receveur && p.receveur._id) {
-                const rId = p.receveur._id.toString();
-                if (!workHours[rId]) {
-                    workHours[rId] = { nom: p.receveur.nom, prenom: p.receveur.prenom, role: p.receveur.role, hours: 0 };
-                }
-                workHours[rId].hours += diff;
-            }
-        });
-
-        res.status(200).json({ workHours: Object.values(workHours) });
-    } catch (error) {
-        console.error("Error fetching stats:", error);
-        res.status(500).json({ error: "Internal server error" });
-    }
-}
-
-export default { getAdminStats };
->>>>>>> a49756bd5b0272b7aa8892ab327a7c1a3b40d74a

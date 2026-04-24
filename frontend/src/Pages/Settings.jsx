@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import AdminSidebar from "../components/AdminSidebar";
@@ -69,20 +68,11 @@ const Settings = () => {
       </div>
     );
   }
-=======
-import React from "react";
-import { useAuth } from "../context/AuthContext";
-import AdminSidebar from "../components/AdminSidebar";
-
-const Settings = () => {
-  const { user } = useAuth();
->>>>>>> a49756bd5b0272b7aa8892ab327a7c1a3b40d74a
 
   return (
     <div className="flex">
       <AdminSidebar />
       <div className="flex-1 md:ml-64 bg-gray-50 min-h-screen pt-16 md:pt-0">
-<<<<<<< HEAD
         <Toaster position="top-right" />
 
         {/* Header */}
@@ -93,6 +83,7 @@ const Settings = () => {
 
         <div className="p-4 md:p-8">
           <div className="flex flex-col lg:flex-row gap-6 max-w-5xl">
+
             {/* Sidebar tabs */}
             <div className="lg:w-56 flex-shrink-0">
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -119,6 +110,7 @@ const Settings = () => {
             {/* Content */}
             <div className="flex-1">
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+
                 {/* General */}
                 {activeTab === "general" && (
                   <div className="space-y-6">
@@ -331,34 +323,12 @@ const Settings = () => {
                     {saving ? "Enregistrement…" : "Enregistrer"}
                   </button>
                 </div>
-              </div>
-=======
-        {/* Top Navbar */}
-        <div className="bg-white shadow-sm p-4 md:p-6 flex justify-between items-center">
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Paramètres</h1>
-        </div>
 
-        {/* Content */}
-        <div className="p-4 md:p-8">
-          <div className="bg-white rounded-lg shadow p-4 md:p-6 max-w-2xl">
-            <h2 className="text-lg md:text-xl font-semibold text-gray-800 mb-4">Paramètres Système</h2>
-            <div className="space-y-4">
-              <div className="pb-4 border-b">
-                <label className="text-sm font-semibold text-gray-700">Nom de l'application</label>
-                <input type="text" value="TransRoute" className="w-full mt-2 px-4 py-2 border border-gray-300 rounded-lg text-sm md:text-base" />
-              </div>
-              <div className="pb-4 border-b">
-                <label className="text-sm font-semibold text-gray-700">Email de support</label>
-                <input type="email" placeholder="support@transroute.com" className="w-full mt-2 px-4 py-2 border border-gray-300 rounded-lg text-sm md:text-base" />
-                    </div>
-              <button className="w-full md:w-auto px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm md:text-base">
-                Enregistrer
-                    </button>
->>>>>>> a49756bd5b0272b7aa8892ab327a7c1a3b40d74a
-            </div>
-          </div>
-        </div>
-      </div>
+              </div>{/* closes bg-white rounded-2xl content panel */}
+            </div>{/* closes flex-1 */}
+          </div>{/* closes flex flex-col lg:flex-row */}
+        </div>{/* closes p-4 md:p-8 */}
+      </div>{/* closes flex-1 md:ml-64 */}
     </div>
   );
 };

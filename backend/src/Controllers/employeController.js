@@ -1,11 +1,8 @@
 import Employe from '../models/employe.js';
 import Admin from '../models/admin.js';
 import Utilisateur from '../models/utilisateur.js';
-<<<<<<< HEAD
 import { sendEmployeeCredentials, sendPasswordChangedEmail } from '../../utils/email.js';
-=======
-import { sendEmployeeCredentials } from '../../utils/email.js';
->>>>>>> a49756bd5b0272b7aa8892ab327a7c1a3b40d74a
+
 
 function getErrorMessage(error) {
   if (error?.name === 'ValidationError') {
@@ -46,11 +43,7 @@ export async function modifierEmploye(req, res) {
     const utilisateur = await Utilisateur.findById(req.params.id).select('+MotDePasse');
     if (!utilisateur) return res.status(404).json({ error: 'Employe non trouve.' });
 
-<<<<<<< HEAD
     const passwordChanged = !!MotDePasse;
-
-=======
->>>>>>> a49756bd5b0272b7aa8892ab327a7c1a3b40d74a
     Object.assign(utilisateur, rest);
     if (statut !== undefined) utilisateur.statut = statut;
     if (congeDebut !== undefined) utilisateur.congeDebut = congeDebut || null;
@@ -59,7 +52,6 @@ export async function modifierEmploye(req, res) {
 
     await utilisateur.save();
 
-<<<<<<< HEAD
     // Send email notification if password was changed
     if (passwordChanged && utilisateur.email) {
       try {
@@ -68,9 +60,6 @@ export async function modifierEmploye(req, res) {
         console.error('Envoi email changement MDP echoue:', emailErr.message);
       }
     }
-
-=======
->>>>>>> a49756bd5b0272b7aa8892ab327a7c1a3b40d74a
     return res.status(200).json({ message: 'Employe modifie avec succes.', employe: utilisateur });
   } catch (error) {
     return res.status(400).json({ error: getErrorMessage(error) });

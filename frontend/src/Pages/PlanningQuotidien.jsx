@@ -9,10 +9,7 @@ import {
   FileText,
   CheckCircle2,
   AlertTriangle,
-<<<<<<< HEAD
   Calendar,
-=======
->>>>>>> a49756bd5b0272b7aa8892ab327a7c1a3b40d74a
 } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
 import { employeeService } from "../services/employeeService.js";
@@ -41,10 +38,9 @@ const HEURES = [
   "20:00-22:00",
 ];
 
-<<<<<<< HEAD
 const JOURS_SEMAINE = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
-// ── Date helpers ── FIXED: use local timezone, NOT UTC ────────────────────────
+// ── Date helpers ──────────────────────────────────────────────────────────────
 function formatDateKey(date) {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -58,8 +54,8 @@ function isSameDate(d1, d2) {
     d1.getMonth() === d2.getMonth() &&
     d1.getDate() === d2.getDate()
   );
-=======
-// ── Date helpers ──────────────────────────────────────────────────────────────
+}
+
 function getCalendarDays(centerDate) {
   const dates = [];
   const center = new Date(centerDate);
@@ -72,28 +68,17 @@ function getCalendarDays(centerDate) {
   return dates;
 }
 
-function formatDateKey(date) {
-  return date.toISOString().split("T")[0];
-}
-
-function isSameDate(d1, d2) {
-  return formatDateKey(d1) === formatDateKey(d2);
->>>>>>> a49756bd5b0272b7aa8892ab327a7c1a3b40d74a
-}
-
 function parseHeureRange(heureRange) {
   const [start, end] = heureRange.split("-");
   return { heuredebut: start, heurefin: end };
 }
 
-<<<<<<< HEAD
-// ── Calendar helpers (Google Calendar style) ──────────────────────────────────
+// ── Calendar helpers ──────────────────────────────────────────────────────────
 function getMonthCalendarWeeks(year, month) {
   const weeks = [];
   const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month + 1, 0);
 
-  // Find monday of the first week
   let startDate = new Date(firstDay);
   const dayOfWeek = startDate.getDay();
   const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
@@ -121,8 +106,6 @@ function getMonthName(month) {
   return names[month];
 }
 
-=======
->>>>>>> a49756bd5b0272b7aa8892ab327a7c1a3b40d74a
 // ── Conflict check ────────────────────────────────────────────────────────────
 function validateConflict({ assignments, dateKey, heure, ligneId, item, currentKey }) {
   const duplicate = Object.entries(assignments).find(([key, value]) => {
@@ -152,15 +135,11 @@ export default function PlanningQuotidien() {
   const { user } = useAuth();
 
   const [dragging, setDragging]             = useState(null);
-<<<<<<< HEAD
   const [selectedDate, setSelectedDate]     = useState(() => {
     const now = new Date();
     now.setHours(0, 0, 0, 0);
     return now;
   });
-=======
-  const [selectedDate, setSelectedDate]     = useState(() => new Date());
->>>>>>> a49756bd5b0272b7aa8892ab327a7c1a3b40d74a
   const [assignments, setAssignments]       = useState({});
   const [conflicts, setConflicts]           = useState([]);
   const [loading, setLoading]               = useState(true);
@@ -177,8 +156,6 @@ export default function PlanningQuotidien() {
   const [receveurs, setReceveurs]   = useState([]);
   const [buses, setBuses]           = useState([]);
 
-<<<<<<< HEAD
-  // Calendar state
   const [calendarMonth, setCalendarMonth] = useState(() => new Date().getMonth());
   const [calendarYear, setCalendarYear]   = useState(() => new Date().getFullYear());
 
@@ -186,9 +163,7 @@ export default function PlanningQuotidien() {
     () => getMonthCalendarWeeks(calendarYear, calendarMonth),
     [calendarYear, calendarMonth]
   );
-=======
   const calendarDays = useMemo(() => getCalendarDays(selectedDate), [selectedDate]);
->>>>>>> a49756bd5b0272b7aa8892ab327a7c1a3b40d74a
 
   const displayName =
     [user?.prenom, user?.nom].filter(Boolean).join(" ").trim() ||
@@ -249,37 +224,21 @@ export default function PlanningQuotidien() {
 
           const slotKey = `${dateKey}__${heure}__${ligneId}`;
 
-          // ── Bus ──
           if (p.bus) {
             newAssignments[`${slotKey}__bus`] = {
-              ...p.bus,
-              type: "bus",
-              busId: p.bus._id,
-              matricule: p.bus.matricule,
+              ...p.bus, type: "bus", busId: p.bus._id, matricule: p.bus.matricule,
             };
             savedMap[`${slotKey}__bus`] = p._id;
           }
-
-          // ── Chauffeur (employe) ──
           if (p.employe) {
             newAssignments[`${slotKey}__driver`] = {
-              ...p.employe,
-              type: "driver",
-              employeeId: p.employe._id,
+              ...p.employe, type: "driver", employeeId: p.employe._id,
             };
             savedMap[`${slotKey}__driver`] = p._id;
           }
-
-<<<<<<< HEAD
-          // ── Receveur ──
-=======
-          // ── Receveur ──  ← was missing!
->>>>>>> a49756bd5b0272b7aa8892ab327a7c1a3b40d74a
           if (p.receveur) {
             newAssignments[`${slotKey}__receveur`] = {
-              ...p.receveur,
-              type: "receveur",
-              employeeId: p.receveur._id,
+              ...p.receveur, type: "receveur", employeeId: p.receveur._id,
             };
             savedMap[`${slotKey}__receveur`] = p._id;
           }
@@ -446,22 +405,16 @@ export default function PlanningQuotidien() {
     }
   };
 
-<<<<<<< HEAD
-  // ── Save Draft ──────────────────────────────────────────────────────────────
-=======
-  // ── Save Draft — FIXED: groups by slot and includes receveur ────────────────
->>>>>>> a49756bd5b0272b7aa8892ab327a7c1a3b40d74a
+  // ── Save draft ──────────────────────────────────────────────────────────────
   const handleSaveDraft = async () => {
     try {
       setSavingDraft(true);
       const nextPlanningMap = { ...savedPlanningMap };
 
-      // 1. Delete removed plannings
       for (const id of deletedPlanningIds) {
         try { await deletePlanning(id); } catch (e) { console.warn("Delete failed:", e.message); }
       }
 
-      // 2. Group assignments by (dateKey, heure, ligneId) → one Planning doc per slot
       const slotMap = {};
       for (const [key, assignment] of Object.entries(assignments)) {
         const parts = key.split("__");
@@ -469,40 +422,25 @@ export default function PlanningQuotidien() {
         const [dateKey, heure, ligneId, type] = parts;
         const slotKey = `${dateKey}__${heure}__${ligneId}`;
         if (!slotMap[slotKey]) slotMap[slotKey] = { dateKey, heure, ligneId };
-        if (type === "bus")      slotMap[slotKey].bus      = assignment;
+        if (type === "bus")           slotMap[slotKey].bus      = assignment;
         else if (type === "driver")   slotMap[slotKey].driver   = assignment;
         else if (type === "receveur") slotMap[slotKey].receveur = assignment;
       }
 
-      // 3. Save / update each complete slot
       for (const [slotKey, slot] of Object.entries(slotMap)) {
         const { dateKey, heure, ligneId, bus, driver, receveur } = slot;
-
-<<<<<<< HEAD
-=======
-        // Only save slots that are fully assigned (bus + chauffeur + receveur)
->>>>>>> a49756bd5b0272b7aa8892ab327a7c1a3b40d74a
         if (!bus?.busId || !driver?.employeeId || !receveur?.employeeId) continue;
 
         const { heuredebut, heurefin } = parseHeureRange(heure);
         const payload = {
-          date:      dateKey,
-          heuredebut,
-          heurefin,
-          ligne:     ligneId,
-          bus:       bus.busId,
-          employe:   driver.employeeId,
-<<<<<<< HEAD
-          receveur:  receveur.employeeId,
-=======
-          receveur:  receveur.employeeId,   // ← was missing in original code!
->>>>>>> a49756bd5b0272b7aa8892ab327a7c1a3b40d74a
+          date: dateKey, heuredebut, heurefin,
+          ligne: ligneId, bus: bus.busId,
+          employe: driver.employeeId, receveur: receveur.employeeId,
         };
 
         try {
           const existingId = nextPlanningMap[`${slotKey}__driver`];
           let id;
-
           if (existingId) {
             const resp = await updatePlanning(existingId, payload);
             id = resp.data?._id || existingId;
@@ -510,19 +448,13 @@ export default function PlanningQuotidien() {
             const resp = await addPlanning(payload);
             id = resp.data?._id;
           }
-
           if (id) {
-<<<<<<< HEAD
-=======
-            // Map all three sub-keys to the same DB document id
->>>>>>> a49756bd5b0272b7aa8892ab327a7c1a3b40d74a
             nextPlanningMap[`${slotKey}__bus`]      = id;
             nextPlanningMap[`${slotKey}__driver`]   = id;
             nextPlanningMap[`${slotKey}__receveur`] = id;
           }
         } catch (err) {
-          const msg = err?.response?.data?.message || "Erreur d'enregistrement";
-          toast.error(`Slot ${heure} — ${msg}`);
+          toast.error(`Slot ${heure} — ${err?.response?.data?.message || "Erreur d'enregistrement"}`);
         }
       }
 
@@ -539,7 +471,6 @@ export default function PlanningQuotidien() {
   // ── Publish ─────────────────────────────────────────────────────────────────
   const handlePublish = async () => {
     const selectedDateKey = formatDateKey(selectedDate);
-
     const ids = [
       ...new Set(
         Object.entries(savedPlanningMap)
@@ -557,16 +488,9 @@ export default function PlanningQuotidien() {
     try {
       setPublishing(true);
       await Promise.all(ids.map((id) => publishPlanningById(id, true)));
-
-<<<<<<< HEAD
-=======
-      // Notify all assigned employees
->>>>>>> a49756bd5b0272b7aa8892ab327a7c1a3b40d74a
       const employeeIds = new Set();
       Object.entries(assignments).forEach(([key, val]) => {
-        if (key.startsWith(selectedDateKey) && val.employeeId) {
-          employeeIds.add(val.employeeId);
-        }
+        if (key.startsWith(selectedDateKey) && val.employeeId) employeeIds.add(val.employeeId);
       });
 
       const dateStr = selectedDate.toLocaleDateString("fr-FR", {
@@ -589,24 +513,15 @@ export default function PlanningQuotidien() {
     }
   };
 
-<<<<<<< HEAD
   // ── Calendar navigation ────────────────────────────────────────────────────
   const handlePrevMonth = () => {
-    if (calendarMonth === 0) {
-      setCalendarMonth(11);
-      setCalendarYear((y) => y - 1);
-    } else {
-      setCalendarMonth((m) => m - 1);
-    }
+    if (calendarMonth === 0) { setCalendarMonth(11); setCalendarYear((y) => y - 1); }
+    else setCalendarMonth((m) => m - 1);
   };
 
   const handleNextMonth = () => {
-    if (calendarMonth === 11) {
-      setCalendarMonth(0);
-      setCalendarYear((y) => y + 1);
-    } else {
-      setCalendarMonth((m) => m + 1);
-    }
+    if (calendarMonth === 11) { setCalendarMonth(0); setCalendarYear((y) => y + 1); }
+    else setCalendarMonth((m) => m + 1);
   };
 
   const handleGoToToday = () => {
@@ -623,7 +538,6 @@ export default function PlanningQuotidien() {
     setSelectedDate(d);
   };
 
-  // Count assignments per day for dot indicators
   const dayAssignmentCounts = useMemo(() => {
     const counts = {};
     Object.keys(assignments).forEach((key) => {
@@ -633,8 +547,6 @@ export default function PlanningQuotidien() {
     return counts;
   }, [assignments]);
 
-=======
->>>>>>> a49756bd5b0272b7aa8892ab327a7c1a3b40d74a
   // ── Loading ─────────────────────────────────────────────────────────────────
   if (loading) {
     return (
@@ -651,11 +563,8 @@ export default function PlanningQuotidien() {
   }
 
   const dateKey = formatDateKey(selectedDate);
-<<<<<<< HEAD
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-=======
->>>>>>> a49756bd5b0272b7aa8892ab327a7c1a3b40d74a
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
@@ -682,13 +591,7 @@ export default function PlanningQuotidien() {
               <FileText size={16} />
               Exporter PDF
             </button>
-
-<<<<<<< HEAD
-=======
-            {/* ← Real NotificationBell (admin's own notifications) */}
->>>>>>> a49756bd5b0272b7aa8892ab327a7c1a3b40d74a
             <NotificationBell />
-
             <div className="flex items-center gap-2 pl-2 border-l border-gray-200">
               <div className="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">{initial}</div>
               <div className="hidden sm:block">
@@ -706,9 +609,7 @@ export default function PlanningQuotidien() {
               <AlertCircle className="text-red-500 flex-shrink-0 mt-0.5" size={18} />
               <div>
                 <p className="text-sm font-semibold text-red-700 mb-1">{conflicts.length} conflit(s) détecté(s)</p>
-                {conflicts.map((c, i) => (
-                  <p key={i} className="text-xs text-red-600">{c.message}</p>
-                ))}
+                {conflicts.map((c, i) => <p key={i} className="text-xs text-red-600">{c.message}</p>)}
               </div>
             </div>
           )}
@@ -723,10 +624,7 @@ export default function PlanningQuotidien() {
                   {" "}— chaque créneau doit avoir 1 chauffeur + 1 receveur + 1 bus.
                 </p>
               </div>
-              <button
-                onClick={() => setShowIncompleteOnly((v) => !v)}
-                className="text-xs font-medium text-amber-700 underline whitespace-nowrap"
-              >
+              <button onClick={() => setShowIncompleteOnly((v) => !v)} className="text-xs font-medium text-amber-700 underline whitespace-nowrap">
                 {showIncompleteOnly ? "Tout afficher" : "Filtrer"}
               </button>
             </div>
@@ -750,43 +648,28 @@ export default function PlanningQuotidien() {
             </button>
           </div>
 
-<<<<<<< HEAD
-          {/* ── Google Calendar Style Monthly View ── */}
+          {/* ── Monthly Calendar ── */}
           <div className="bg-white border border-gray-200 rounded-2xl shadow-sm mb-5 overflow-hidden">
-            {/* Calendar header */}
             <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 bg-gradient-to-r from-indigo-50 to-white">
               <div className="flex items-center gap-3">
                 <Calendar size={18} className="text-indigo-600" />
-                <h3 className="text-base font-bold text-gray-800">
-                  {getMonthName(calendarMonth)} {calendarYear}
-                </h3>
+                <h3 className="text-base font-bold text-gray-800">{getMonthName(calendarMonth)} {calendarYear}</h3>
               </div>
               <div className="flex items-center gap-2">
-                <button
-                  onClick={handleGoToToday}
-                  className="px-3 py-1.5 text-xs font-semibold text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition"
-                >
+                <button onClick={handleGoToToday} className="px-3 py-1.5 text-xs font-semibold text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition">
                   Aujourd'hui
                 </button>
-                <button onClick={handlePrevMonth} className="p-1.5 rounded-lg hover:bg-gray-100 transition">
-                  <ChevronLeft size={16} />
-                </button>
-                <button onClick={handleNextMonth} className="p-1.5 rounded-lg hover:bg-gray-100 transition">
-                  <ChevronRight size={16} />
-                </button>
+                <button onClick={handlePrevMonth} className="p-1.5 rounded-lg hover:bg-gray-100 transition"><ChevronLeft size={16} /></button>
+                <button onClick={handleNextMonth} className="p-1.5 rounded-lg hover:bg-gray-100 transition"><ChevronRight size={16} /></button>
               </div>
             </div>
 
-            {/* Day headers */}
             <div className="grid grid-cols-7 border-b border-gray-100">
               {JOURS_SEMAINE.map((jour) => (
-                <div key={jour} className="px-2 py-2 text-center text-[11px] font-bold text-gray-400 uppercase tracking-wider">
-                  {jour}
-                </div>
+                <div key={jour} className="px-2 py-2 text-center text-[11px] font-bold text-gray-400 uppercase tracking-wider">{jour}</div>
               ))}
             </div>
 
-            {/* Calendar grid */}
             <div className="divide-y divide-gray-50">
               {calendarWeeks.map((week, wi) => (
                 <div key={wi} className="grid grid-cols-7">
@@ -796,108 +679,72 @@ export default function PlanningQuotidien() {
                     const isToday = isSameDate(day, today);
                     const dayKey = formatDateKey(day);
                     const hasData = dayAssignmentCounts[dayKey] > 0;
-
                     return (
                       <button
                         key={dayKey}
                         onClick={() => handleSelectCalendarDay(day)}
-                        className={`relative px-1 py-2.5 text-center transition-all hover:bg-indigo-50 group ${
-                          !isCurrentMonth ? "opacity-30" : ""
-                        }`}
+                        className={`relative px-1 py-2.5 text-center transition-all hover:bg-indigo-50 group ${!isCurrentMonth ? "opacity-30" : ""}`}
                       >
-                        <div
-                          className={`w-8 h-8 mx-auto flex items-center justify-center rounded-full text-sm font-medium transition-all ${
-                            isSelected
-                              ? "bg-indigo-600 text-white shadow-md shadow-indigo-200 scale-110"
-                              : isToday
-                              ? "bg-indigo-100 text-indigo-700 font-bold ring-2 ring-indigo-300"
-                              : "text-gray-700 group-hover:bg-indigo-100"
-                          }`}
-                        >
+                        <div className={`w-8 h-8 mx-auto flex items-center justify-center rounded-full text-sm font-medium transition-all ${
+                          isSelected ? "bg-indigo-600 text-white shadow-md shadow-indigo-200 scale-110"
+                          : isToday ? "bg-indigo-100 text-indigo-700 font-bold ring-2 ring-indigo-300"
+                          : "text-gray-700 group-hover:bg-indigo-100"
+                        }`}>
                           {day.getDate()}
                         </div>
-                        {/* Dot indicator for days with planning data */}
                         {hasData && !isSelected && (
-                          <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-0.5">
-                            <div className="w-1 h-1 rounded-full bg-indigo-400" />
-                          </div>
+                          <div className="absolute bottom-1 left-1/2 -translate-x-1/2"><div className="w-1 h-1 rounded-full bg-indigo-400" /></div>
                         )}
                         {isSelected && hasData && (
-                          <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-0.5">
-                            <div className="w-1 h-1 rounded-full bg-white/60" />
-                          </div>
+                          <div className="absolute bottom-1 left-1/2 -translate-x-1/2"><div className="w-1 h-1 rounded-full bg-white/60" /></div>
                         )}
                       </button>
                     );
                   })}
                 </div>
               ))}
-=======
-          {/* ── Date navigator ── */}
+            </div>
+          </div>
+
+          {/* ── Date strip navigator ── */}
           <div className="bg-white border border-gray-200 rounded-xl p-3 mb-5 shadow-sm">
             <div className="flex items-center gap-2 overflow-x-auto">
-              <button
-                onClick={() => { const d = new Date(selectedDate); d.setDate(d.getDate() - 1); setSelectedDate(d); }}
-                className="p-1.5 rounded-lg hover:bg-gray-100 flex-shrink-0"
-              >
+              <button onClick={() => { const d = new Date(selectedDate); d.setDate(d.getDate() - 1); setSelectedDate(d); }} className="p-1.5 rounded-lg hover:bg-gray-100 flex-shrink-0">
                 <ChevronLeft size={18} />
               </button>
-
               {calendarDays.map((date) => {
                 const sel     = isSameDate(date, selectedDate);
-                const isToday = isSameDate(date, new Date());
+                const isToday = isSameDate(date, today);
                 return (
                   <button
                     key={formatDateKey(date)}
                     onClick={() => setSelectedDate(date)}
                     className={`min-w-[56px] px-2 py-2 rounded-lg text-center transition flex-shrink-0 relative ${
-                      sel
-                        ? "bg-indigo-600 text-white shadow-md"
-                        : "hover:bg-gray-50 text-gray-600"
+                      sel ? "bg-indigo-600 text-white shadow-md" : "hover:bg-gray-50 text-gray-600"
                     }`}
                   >
-                    <div className="text-xs uppercase">
-                      {date.toLocaleDateString("fr-FR", { weekday: "short" })}
-                    </div>
-                    <div className="text-sm font-bold mt-0.5">
-                      {date.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" })}
-                    </div>
-                    {/* Today indicator */}
-                    {isToday && !sel && (
-                      <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-indigo-500 rounded-full" />
-                    )}
-                    {isToday && sel && (
-                      <div className="text-[9px] text-indigo-200 font-semibold mt-0.5">Aujourd'hui</div>
-                    )}
+                    <div className="text-xs uppercase">{date.toLocaleDateString("fr-FR", { weekday: "short" })}</div>
+                    <div className="text-sm font-bold mt-0.5">{date.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" })}</div>
+                    {isToday && !sel && <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-indigo-500 rounded-full" />}
+                    {isToday && sel && <div className="text-[9px] text-indigo-200 font-semibold mt-0.5">Aujourd'hui</div>}
                   </button>
                 );
               })}
-
-              <button
-                onClick={() => { const d = new Date(selectedDate); d.setDate(d.getDate() + 1); setSelectedDate(d); }}
-                className="p-1.5 rounded-lg hover:bg-gray-100 flex-shrink-0"
-              >
+              <button onClick={() => { const d = new Date(selectedDate); d.setDate(d.getDate() + 1); setSelectedDate(d); }} className="p-1.5 rounded-lg hover:bg-gray-100 flex-shrink-0">
                 <ChevronRight size={18} />
               </button>
->>>>>>> a49756bd5b0272b7aa8892ab327a7c1a3b40d74a
             </div>
           </div>
 
-          {/* ── Selected date display ── */}
+          {/* ── Selected date heading ── */}
           <div className="mb-4">
             <h2 className="text-lg font-bold text-gray-800">
               Planning du{" "}
               <span className="text-indigo-600">
                 {selectedDate.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
               </span>
-<<<<<<< HEAD
               {isSameDate(selectedDate, today) && (
-=======
-              {isSameDate(selectedDate, new Date()) && (
->>>>>>> a49756bd5b0272b7aa8892ab327a7c1a3b40d74a
-                <span className="ml-2 text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-semibold align-middle">
-                  Aujourd'hui
-                </span>
+                <span className="ml-2 text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-semibold align-middle">Aujourd'hui</span>
               )}
             </h2>
           </div>
@@ -911,7 +758,6 @@ export default function PlanningQuotidien() {
                 <p className="text-xs text-gray-400 mt-0.5">Glisser vers un créneau</p>
               </div>
               <div className="overflow-y-auto max-h-[65vh] p-4 space-y-5">
-
                 {/* Buses */}
                 <div>
                   <div className="flex items-center gap-2 mb-2">
@@ -920,22 +766,15 @@ export default function PlanningQuotidien() {
                   </div>
                   {buses.length === 0 && <p className="text-xs text-gray-400">Aucun bus actif</p>}
                   {buses.map((b) => (
-                    <div
-                      key={b._id}
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, { ...b, type: "bus" })}
-                      className="flex items-center gap-2 p-2.5 rounded-lg border border-indigo-100 bg-indigo-50 mb-1.5 cursor-grab hover:shadow-sm hover:border-indigo-300 transition"
-                    >
+                    <div key={b._id} draggable onDragStart={(e) => handleDragStart(e, { ...b, type: "bus" })}
+                      className="flex items-center gap-2 p-2.5 rounded-lg border border-indigo-100 bg-indigo-50 mb-1.5 cursor-grab hover:shadow-sm hover:border-indigo-300 transition">
                       <div className="min-w-0">
-                        <div className="text-xs font-bold text-indigo-900 truncate">
-                          {b.matricule || b.immatriculation || "—"}
-                        </div>
+                        <div className="text-xs font-bold text-indigo-900 truncate">{b.matricule || b.immatriculation || "—"}</div>
                         <div className="text-xs text-indigo-400 truncate">{b.model || "Bus"}</div>
                       </div>
                     </div>
                   ))}
                 </div>
-
                 {/* Chauffeurs */}
                 <div>
                   <div className="flex items-center gap-2 mb-2">
@@ -944,15 +783,9 @@ export default function PlanningQuotidien() {
                   </div>
                   {chauffeurs.length === 0 && <p className="text-xs text-gray-400">Aucun chauffeur actif</p>}
                   {chauffeurs.map((c) => (
-                    <div
-                      key={c._id}
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, { ...c, type: "driver" })}
-                      className="flex items-center gap-2 p-2.5 rounded-lg border border-emerald-100 bg-emerald-50 mb-1.5 cursor-grab hover:shadow-sm hover:border-emerald-300 transition"
-                    >
-                      <div className="w-6 h-6 rounded-full bg-emerald-200 flex items-center justify-center text-emerald-700 text-xs font-bold flex-shrink-0">
-                        {c.nom?.charAt(0)}
-                      </div>
+                    <div key={c._id} draggable onDragStart={(e) => handleDragStart(e, { ...c, type: "driver" })}
+                      className="flex items-center gap-2 p-2.5 rounded-lg border border-emerald-100 bg-emerald-50 mb-1.5 cursor-grab hover:shadow-sm hover:border-emerald-300 transition">
+                      <div className="w-6 h-6 rounded-full bg-emerald-200 flex items-center justify-center text-emerald-700 text-xs font-bold flex-shrink-0">{c.nom?.charAt(0)}</div>
                       <div className="min-w-0">
                         <div className="text-xs font-bold text-emerald-900 truncate">{c.nom} {c.prenom}</div>
                         <div className="text-xs text-emerald-400">{c.age ? `${c.age} ans` : "Chauffeur"}</div>
@@ -960,7 +793,6 @@ export default function PlanningQuotidien() {
                     </div>
                   ))}
                 </div>
-
                 {/* Receveurs */}
                 <div>
                   <div className="flex items-center gap-2 mb-2">
@@ -969,15 +801,9 @@ export default function PlanningQuotidien() {
                   </div>
                   {receveurs.length === 0 && <p className="text-xs text-gray-400">Aucun receveur actif</p>}
                   {receveurs.map((r) => (
-                    <div
-                      key={r._id}
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, { ...r, type: "receveur" })}
-                      className="flex items-center gap-2 p-2.5 rounded-lg border border-amber-100 bg-amber-50 mb-1.5 cursor-grab hover:shadow-sm hover:border-amber-300 transition"
-                    >
-                      <div className="w-6 h-6 rounded-full bg-amber-200 flex items-center justify-center text-amber-700 text-xs font-bold flex-shrink-0">
-                        {r.nom?.charAt(0)}
-                      </div>
+                    <div key={r._id} draggable onDragStart={(e) => handleDragStart(e, { ...r, type: "receveur" })}
+                      className="flex items-center gap-2 p-2.5 rounded-lg border border-amber-100 bg-amber-50 mb-1.5 cursor-grab hover:shadow-sm hover:border-amber-300 transition">
+                      <div className="w-6 h-6 rounded-full bg-amber-200 flex items-center justify-center text-amber-700 text-xs font-bold flex-shrink-0">{r.nom?.charAt(0)}</div>
                       <div className="min-w-0">
                         <div className="text-xs font-bold text-amber-900 truncate">{r.nom} {r.prenom}</div>
                         <div className="text-xs text-amber-400">{r.age ? `${r.age} ans` : "Receveur"}</div>
@@ -985,7 +811,6 @@ export default function PlanningQuotidien() {
                     </div>
                   ))}
                 </div>
-
               </div>
             </div>
 
@@ -995,13 +820,9 @@ export default function PlanningQuotidien() {
                 <table className="w-full border-collapse text-sm">
                   <thead>
                     <tr className="border-b border-gray-200 bg-gray-50">
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-28 sticky left-0 bg-gray-50 z-10">
-                        Heure
-                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-28 sticky left-0 bg-gray-50 z-10">Heure</th>
                       {lignes.length === 0 ? (
-                        <th className="px-4 py-3 text-xs text-gray-400 font-normal">
-                          Aucune ligne disponible
-                        </th>
+                        <th className="px-4 py-3 text-xs text-gray-400 font-normal">Aucune ligne disponible</th>
                       ) : (
                         lignes.map((l) => (
                           <th key={l._id} className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider border-l border-gray-100 min-w-[180px]">
@@ -1049,56 +870,31 @@ export default function PlanningQuotidien() {
                                 onDrop={(e) => handleDrop(e, heure, ligne, selectedDate)}
                                 className={`px-3 py-2 border-l border-gray-100 min-h-[80px] align-top transition-colors relative ${cellBg}`}
                               >
-                                {/* Status badge */}
-                                {cellStatus === "complete" && (
-                                  <CheckCircle2 size={12} className="absolute top-1.5 right-1.5 text-emerald-500" />
-                                )}
-                                {cellStatus === "incomplete" && (
-                                  <AlertTriangle size={12} className="absolute top-1.5 right-1.5 text-amber-500" title="Incomplet" />
-                                )}
+                                {cellStatus === "complete" && <CheckCircle2 size={12} className="absolute top-1.5 right-1.5 text-emerald-500" />}
+                                {cellStatus === "incomplete" && <AlertTriangle size={12} className="absolute top-1.5 right-1.5 text-amber-500" title="Incomplet" />}
 
                                 {slotAssignments.length === 0 ? (
                                   <span className="text-xs text-gray-300 font-medium">Vide</span>
                                 ) : (
                                   <div className="space-y-1">
                                     {slotAssignments.map(({ key, value: assignment }) => {
-                                      const label =
-                                        assignment.type === "bus"
-                                          ? assignment.matricule || assignment.immatriculation || "Bus"
-                                          : `${assignment.nom ?? ""} ${(assignment.prenom ?? "").charAt(0)}.`;
-
-                                      const colorClass =
-                                        assignment.type === "bus"
-                                          ? "bg-indigo-100 text-indigo-800"
-                                          : assignment.type === "driver"
-                                          ? "bg-emerald-100 text-emerald-800"
-                                          : "bg-amber-100 text-amber-800";
-
-                                      const icon =
-                                        assignment.type === "bus" ? "🚌"
-                                        : assignment.type === "driver" ? "🧑‍✈️"
-                                        : "🎫";
-
+                                      const label = assignment.type === "bus"
+                                        ? assignment.matricule || assignment.immatriculation || "Bus"
+                                        : `${assignment.nom ?? ""} ${(assignment.prenom ?? "").charAt(0)}.`;
+                                      const colorClass = assignment.type === "bus" ? "bg-indigo-100 text-indigo-800"
+                                        : assignment.type === "driver" ? "bg-emerald-100 text-emerald-800"
+                                        : "bg-amber-100 text-amber-800";
+                                      const icon = assignment.type === "bus" ? "🚌" : assignment.type === "driver" ? "🧑‍✈️" : "🎫";
                                       return (
-                                        <div
-                                          key={key}
-                                          className={`flex items-center justify-between gap-1 px-2 py-1 rounded-lg text-xs font-semibold ${colorClass}`}
-                                        >
+                                        <div key={key} className={`flex items-center justify-between gap-1 px-2 py-1 rounded-lg text-xs font-semibold ${colorClass}`}>
                                           <div className="flex items-center gap-1 min-w-0">
                                             <span>{icon}</span>
                                             <span className="truncate">{label}</span>
                                           </div>
-                                          <button
-                                            onClick={() => handleRemove(key)}
-                                            className="opacity-50 hover:opacity-100 flex-shrink-0 font-bold leading-none ml-1"
-                                            title="Retirer"
-                                          >
-                                            ×
-                                          </button>
+                                          <button onClick={() => handleRemove(key)} className="opacity-50 hover:opacity-100 flex-shrink-0 font-bold leading-none ml-1" title="Retirer">×</button>
                                         </div>
                                       );
                                     })}
-
                                     {cellStatus === "incomplete" && (
                                       <div className="text-[10px] text-amber-600 italic pt-0.5">
                                         {!assignments[`${dateKey}__${heure}__${ligne._id}__bus`] && "🚌 bus manquant  "}
@@ -1122,31 +918,22 @@ export default function PlanningQuotidien() {
 
           {/* ── Action buttons ── */}
           <div className="mt-5 flex items-center gap-3 flex-wrap">
-            <button
-              onClick={handleSaveDraft}
-              disabled={savingDraft || publishing}
-              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-sm font-bold rounded-xl transition shadow-sm"
-            >
+            <button onClick={handleSaveDraft} disabled={savingDraft || publishing}
+              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-sm font-bold rounded-xl transition shadow-sm">
               {savingDraft ? "Enregistrement…" : "💾 Enregistrer brouillon"}
             </button>
-            <button
-              onClick={handlePublish}
-              disabled={publishing || savingDraft}
-              className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-sm font-bold rounded-xl transition shadow-sm"
-            >
+            <button onClick={handlePublish} disabled={publishing || savingDraft}
+              className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-sm font-bold rounded-xl transition shadow-sm">
               {publishing ? "Publication…" : "📤 Publier & notifier"}
             </button>
-
             <div className="ml-auto flex items-center gap-2 text-xs text-gray-500">
               {incompleteCellCount > 0 ? (
                 <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-amber-100 text-amber-700 rounded-full font-semibold">
-                  <AlertTriangle size={12} />
-                  {incompleteCellCount} incomplet(s)
+                  <AlertTriangle size={12} />{incompleteCellCount} incomplet(s)
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-full font-semibold">
-                  <CheckCircle2 size={12} />
-                  Tous les créneaux sont complets
+                  <CheckCircle2 size={12} />Tous les créneaux sont complets
                 </span>
               )}
             </div>

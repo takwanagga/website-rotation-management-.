@@ -52,11 +52,7 @@ export const updateLine = (id, lineData) =>
 export const setLineStatut = (id, body) =>
   axiosInstance.post(`/ligne/statut/${id}`, body);
 
-<<<<<<< HEAD
-// Planning APIs
-=======
 // Planning APIs (alignées sur backend/src/Routes/planning.js)
->>>>>>> a49756bd5b0272b7aa8892ab327a7c1a3b40d74a
 export const addPlanning = (planningData) =>
   axiosInstance.post("/planning/ajouter", planningData);
 
@@ -84,7 +80,6 @@ export const listPlanningByBus = (busId) =>
 export const listPlanningByDateRange = (start, end) =>
   axiosInstance.get(`/planning/range`, { params: { start, end } });
 
-<<<<<<< HEAD
 // Stats APIs
 export const getAdminStats = () =>
   axiosInstance.get("/stats/admin");
@@ -98,8 +93,3 @@ export const getSettings = () =>
 
 export const updateSettings = (settingsData) =>
   axiosInstance.post("/settings", settingsData);
-=======
-export const getAdminStats = () =>
-  axiosInstance.get("/stats/admin");
-
->>>>>>> a49756bd5b0272b7aa8892ab327a7c1a3b40d74a
