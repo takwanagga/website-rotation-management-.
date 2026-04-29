@@ -3,7 +3,6 @@ import Bus from '../models/bus.js';
 import Employe from '../models/employe.js';
 import Ligne from '../models/ligne.js';
 
-// ── Constants ─────────────────────────────────────────────────────────────────
 const HEURES = [
   { label: "06:00-08:00", start: 6,  end: 8,  heuredebut: "06:00", heurefin: "08:00" },
   { label: "08:00-10:00", start: 8,  end: 10, heuredebut: "08:00", heurefin: "10:00" },
@@ -13,6 +12,10 @@ const HEURES = [
   { label: "16:00-18:00", start: 16, end: 18, heuredebut: "16:00", heurefin: "18:00" },
   { label: "18:00-20:00", start: 18, end: 20, heuredebut: "18:00", heurefin: "20:00" },
   { label: "20:00-22:00", start: 20, end: 22, heuredebut: "20:00", heurefin: "22:00" },
+  { label: "22:00-00:00", start: 22, end: 24, heuredebut: "22:00", heurefin: "00:00" },
+  { label: "00:00-02:00", start: 0,  end: 2,  heuredebut: "00:00", heurefin: "02:00" },
+  { label: "02:00-04:00", start: 2,  end: 4,  heuredebut: "02:00", heurefin: "04:00" },
+  { label: "04:00-06:00", start: 4,  end: 6,  heuredebut: "04:00", heurefin: "06:00" },
 ];
 
 const MAX_DAILY_HOURS = 8;

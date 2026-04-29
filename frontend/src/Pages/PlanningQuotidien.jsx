@@ -36,6 +36,9 @@ const HEURES = [
   "16:00-18:00",
   "18:00-20:00",
   "20:00-22:00",
+  "00:00-02:00",
+  "02:00-04:00",
+  "04:00-06:00",
 ];
 
 const JOURS_SEMAINE = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
@@ -838,7 +841,7 @@ export default function PlanningQuotidien() {
                       <tr key={heure} className="border-b border-gray-100 last:border-0">
                         <td className="px-4 py-3 text-xs font-bold text-gray-600 whitespace-nowrap align-top sticky left-0 bg-white z-10 border-r border-gray-100">
                           {heure}
-                          {parseInt(heure.split(":")[0]) >= 18 && <span className="ml-1">🌙</span>}
+                          {(parseInt(heure.split(":")[0]) >= 22 || parseInt(heure.split(":")[0]) < 6) && <span>🌙</span>}
                         </td>
                         {lignes.length === 0 ? (
                           <td className="px-4 py-3 text-xs text-gray-300 text-center">—</td>

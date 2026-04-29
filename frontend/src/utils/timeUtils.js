@@ -13,10 +13,13 @@ export function timeToMinutes(timeStr) {
  */
 export function parseTimeRange(rangeStr) {
   const [start, end] = rangeStr.split('-');
+  const startMin= timeToMinutes(start);
+  const endMin = timeToMinutes(end);
+  if (endMin <= startMin) endMin += 24 * 60; 
   return {
-    start: timeToMinutes(start),
-    end: timeToMinutes(end),
-    duration: timeToMinutes(end) - timeToMinutes(start),
+    start: startMin,
+    end: endMin,
+    duration: endMin - startMin,
     startStr: start,
     endStr: end
   };
@@ -56,13 +59,7 @@ export function isSameDate(d1, d2) {
   return formatDateKey(d1) === formatDateKey(d2);
 }
 
-/**
- * Calculate total assigned hours for an employee on a specific date
- * @param {Object} assignments - All assignments object
- * @param {string} dateKey - Date key in YYYY-MM-DD format
- * @param {string} employeeId - Employee ID
- * @returns {number} Total hours assigned
- */
+
 export function getEmployeeDailyHours(assignments, dateKey, employeeId) {
   let totalMinutes = 0;
   
@@ -79,13 +76,7 @@ export function getEmployeeDailyHours(assignments, dateKey, employeeId) {
   return totalMinutes / 60;
 }
 
-/**
- * Calculate total assigned hours for a bus on a specific date
- * @param {Object} assignments - All assignments object
- * @param {string} dateKey - Date key in YYYY-MM-DD format
- * @param {string} busId - Bus ID
- * @returns {number} Total hours assigned
- */
+
 export function getBusDailyHours(assignments, dateKey, busId) {
   let totalMinutes = 0;
   
@@ -102,11 +93,7 @@ export function getBusDailyHours(assignments, dateKey, busId) {
   return totalMinutes / 60;
 }
 
-/**
- * Check if an employee is available for a specific time slot
- * @param {Object} params - Check parameters
- * @returns {Object} { available: boolean, reason?: string }
- */
+
 export function checkEmployeeAvailability({
   assignments,
   dateKey,
@@ -160,12 +147,6 @@ export function checkEmployeeAvailability({
   };
 }
 
-/**
- * Check if a bus is available for a specific time slot
- * Buses CAN do consecutive slots but NOT overlapping
- * @param {Object} params - Check parameters
- * @returns {Object} { available: boolean, reason?: string }
- */
 export function checkBusAvailability({
   assignments,
   dateKey,
