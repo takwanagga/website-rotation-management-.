@@ -16,6 +16,7 @@ export default function Buses() {
   const [filteredBuses, setFilteredBuses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [showInactive, setShowInactive] = useState(false);
   const [page, setPage] = useState(1);
   const perPage = 10;
 
@@ -44,14 +45,21 @@ export default function Buses() {
 
   useEffect(() => {
     const q = search.toLowerCase();
-    const result = buses.filter(
+    
+    const activeFilter = showInactive 
+      ? buses.filter(bus => bus.status === "retiré" || bus.statut === "retiré")
+      : buses.filter(bus => bus.status !== "retiré" && bus.statut !== "retiré");
+
+    const result = activeFilter.filter(
       (bus) =>
         bus.immatriculation?.toLowerCase().includes(q) ||
-        bus.model?.toLowerCase().includes(q)
+        bus.model?.toLowerCase().includes(q) ||
+        bus.status?.toLowerCase().includes(q) ||
+        bus.statut?.toLowerCase().includes(q)
     );
     setFilteredBuses(result);
     setPage(1);
-  }, [search, buses]);
+  }, [search, buses, showInactive]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -112,7 +120,7 @@ export default function Buses() {
 
         <div className="bg-white shadow-sm p-4 md:p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <h1 className="text-2xl md:text-3xl font-bold text-gray-800">
-            Gestion des Bus
+            {showInactive ? "Bus Retirés" : "Gestion des Bus"}
           </h1>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
             <div className="relative">
@@ -130,12 +138,25 @@ export default function Buses() {
             </div>
             <button
               type="button"
-              onClick={() => openForm()}
-              className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+              onClick={() => setShowInactive(!showInactive)}
+              className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-colors whitespace-nowrap text-sm font-medium ${
+                showInactive 
+                  ? "bg-gray-200 text-gray-800 hover:bg-gray-300" 
+                  : "bg-red-50 text-red-600 border border-red-100 hover:bg-red-100"
+              }`}
             >
-              <Plus size={18} />
-              Ajouter
+              📦 {showInactive ? "Retour aux actifs" : `Voir les retirés (${buses.filter(b => b.status === "retiré" || b.statut === "retiré").length})`}
             </button>
+            {!showInactive && (
+              <button
+                type="button"
+                onClick={() => openForm()}
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+              >
+                <Plus size={18} />
+                Ajouter
+              </button>
+            )}
           </div>
         </div>
 

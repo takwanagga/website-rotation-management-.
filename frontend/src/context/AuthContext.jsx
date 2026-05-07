@@ -60,15 +60,20 @@ export function AuthProvider({ children }) {
     localStorage.removeItem("token");
   }, []);
 
+  const updateUser = useCallback((updatedFields) => {
+    setUser((prev) => prev ? { ...prev, ...updatedFields } : null);
+  }, []);
+
   const value = useMemo(
     () => ({
       user,
       loading,
       login,
       logout,
+      updateUser,
       isAuthenticated: Boolean(user),
     }),
-    [user, loading, login, logout]
+    [user, loading, login, logout, updateUser]
   );
 
   return (

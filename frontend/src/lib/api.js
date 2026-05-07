@@ -10,6 +10,9 @@ export const signupEmployee = (data) =>
 export const getCurrentUser = () =>
   axiosInstance.get("/auth/me");
 
+export const updateProfile = (profileData) =>
+  axiosInstance.put("/auth/profile", profileData);
+
 export const verifyUser = () =>
   axiosInstance.get("/auth/verify");
 

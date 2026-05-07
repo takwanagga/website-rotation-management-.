@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
-import { listPlanningByEmployee, getEmployeeWorkHours } from "../lib/api.js";
+import { listPlanningByEmployee, getEmployeeWorkHours, updateProfile } from "../lib/api.js";
 import NotificationBell from "../components/NotificationBell.jsx";
 import http from "../services/httpClient.js";
 import jsPDF from "jspdf";
@@ -9,7 +9,7 @@ import autoTable from "jspdf-autotable";
 import {
   CalendarDays, Clock, Bus, User, MapPin, LogOut,
   Bell, BarChart3, History, UserCircle, Sun, Moon,
-  FileText, ChevronDown, Filter,
+  FileText, ChevronDown, Filter, Edit2, Save, X, Key, Phone
 } from "lucide-react";
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
@@ -67,13 +67,13 @@ const TABS = [
 ];
 
 export default function EmployeePortal() {
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   const [activeTab, setActiveTab] = useState("planning");
 
   // ── Planning state ──
   const [plannings, setPlannings] = useState([]);
   const [planningLoading, setPlanningLoading] = useState(true);
-  const [planFilter, setPlanFilter] = useState("upcoming");
+  const [planFilter, setPlanFilter] = useState("today");
 
   // ── Hours state ──
   const [hoursData, setHoursData] = useState(null);
@@ -87,6 +87,57 @@ export default function EmployeePortal() {
 
   const roleLabel = user?.role === "chauffeur" ? "Chauffeur" : "Receveur";
   const roleColor = user?.role === "chauffeur" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700";
+
+  // ── Profile Edit State ──
+  const [editProfileMode, setEditProfileMode] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    telephone: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+
+  const handleProfileChange = (e) => {
+    const { name, value } = e.target;
+    setProfileForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSaveProfile = async (e) => {
+    e.preventDefault();
+    if (profileForm.newPassword && profileForm.newPassword !== profileForm.confirmPassword) {
+      toast.error("Les mots de passe ne correspondent pas");
+      return;
+    }
+    
+    setProfileSaving(true);
+    try {
+      const payload = { telephone: profileForm.telephone };
+      if (profileForm.newPassword) {
+        payload.MotDePasse = profileForm.newPassword;
+      }
+      
+      const res = await updateProfile(payload);
+      updateUser(res.data.employe);
+      toast.success("Profil mis à jour avec succès");
+      setEditProfileMode(false);
+      setProfileForm({ telephone: "", newPassword: "", confirmPassword: "" });
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Erreur lors de la mise à jour du profil");
+    } finally {
+      setProfileSaving(false);
+    }
+  };
+
+  const toggleEditProfile = () => {
+    if (!editProfileMode) {
+      setProfileForm({
+        telephone: user?.telephone || "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+    }
+    setEditProfileMode(!editProfileMode);
+  };
 
   // ── Fetch plannings ──
   useEffect(() => {
@@ -302,7 +353,6 @@ export default function EmployeePortal() {
             {/* Filters */}
             <div className="flex gap-2 mb-6 bg-white rounded-xl p-1 border border-gray-100 shadow-sm w-fit">
               {[
-                { key: "upcoming", label: "À venir" },
                 { key: "today", label: "Aujourd'hui" },
                 { key: "past", label: "Passés" },
                 { key: "all", label: "Tous" },
@@ -422,21 +472,129 @@ export default function EmployeePortal() {
 
               {/* Profile info */}
               <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {[
-                    { label: "Email", value: user?.email },
-                    { label: "Mécano", value: user?.mecano },
-                    { label: "Téléphone", value: user?.telephone || "—" },
-                    { label: "Localisation", value: user?.localisation || "—" },
-                    { label: "Âge", value: user?.age ? `${user.age} ans` : "—" },
-                    { label: "Statut", value: user?.statut || "actif" },
-                  ].map(({ label, value }) => (
-                    <div key={label} className="bg-gray-50 rounded-xl p-4">
-                      <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">{label}</p>
-                      <p className="text-sm font-semibold text-gray-800">{value}</p>
+                {!editProfileMode ? (
+                  <>
+                    <div className="flex justify-end mb-4">
+                      <button 
+                        onClick={toggleEditProfile}
+                        className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-xl text-sm font-semibold transition"
+                      >
+                        <Edit2 size={16} /> Modifier
+                      </button>
                     </div>
-                  ))}
-                </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {[
+                        { label: "Email", value: user?.email },
+                        { label: "Mécano", value: user?.mecano },
+                        { label: "Téléphone", value: user?.telephone || "—" },
+                        { label: "Localisation", value: user?.localisation || "—" },
+                        { label: "Âge", value: user?.age ? `${user.age} ans` : "—" },
+                        { label: "Statut", value: user?.statut || "actif" },
+                      ].map(({ label, value }) => (
+                        <div key={label} className="bg-gray-50 rounded-xl p-4">
+                          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">{label}</p>
+                          <p className="text-sm font-semibold text-gray-800">{value}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <form onSubmit={handleSaveProfile} className="space-y-4">
+                    <div className="flex justify-between items-center mb-6">
+                      <h3 className="text-lg font-bold text-gray-800">Modifier mon profil</h3>
+                      <button 
+                        type="button" 
+                        onClick={toggleEditProfile}
+                        className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition"
+                      >
+                        <X size={20} />
+                      </button>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="bg-gray-50 rounded-xl p-4 opacity-70">
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Email</p>
+                        <p className="text-sm font-semibold text-gray-800">{user?.email}</p>
+                      </div>
+                      <div className="bg-gray-50 rounded-xl p-4 opacity-70">
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Mécano</p>
+                        <p className="text-sm font-semibold text-gray-800">{user?.mecano}</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4">
+                      <label className="block text-sm font-bold text-gray-700 mb-1 flex items-center gap-2">
+                        <Phone size={16} className="text-indigo-500" /> Numéro de téléphone
+                      </label>
+                      <input
+                        type="text"
+                        name="telephone"
+                        value={profileForm.telephone}
+                        onChange={handleProfileChange}
+                        className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-400 outline-none"
+                        placeholder="Votre numéro de téléphone"
+                      />
+                    </div>
+
+                    <div className="pt-4 border-t border-gray-100 mt-6">
+                      <h4 className="text-sm font-bold text-gray-800 flex items-center gap-2 mb-4">
+                        <Key size={16} className="text-indigo-500" /> Changer le mot de passe
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                            Nouveau mot de passe
+                          </label>
+                          <input
+                            type="password"
+                            name="newPassword"
+                            value={profileForm.newPassword}
+                            onChange={handleProfileChange}
+                            autoComplete="new-password"
+                            className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-400 outline-none"
+                            placeholder="Laisser vide pour ne pas changer"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                            Confirmer
+                          </label>
+                          <input
+                            type="password"
+                            name="confirmPassword"
+                            value={profileForm.confirmPassword}
+                            onChange={handleProfileChange}
+                            autoComplete="new-password"
+                            className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-400 outline-none"
+                            placeholder="Confirmer le mot de passe"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-100">
+                      <button
+                        type="button"
+                        onClick={toggleEditProfile}
+                        className="px-5 py-2.5 text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 font-semibold transition"
+                      >
+                        Annuler
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={profileSaving}
+                        className="px-5 py-2.5 text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 font-semibold transition flex items-center gap-2"
+                      >
+                        {profileSaving ? (
+                          <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                        ) : (
+                          <Save size={16} />
+                        )}
+                        Enregistrer
+                      </button>
+                    </div>
+                  </form>
+                )}
               </div>
             </div>
           </div>

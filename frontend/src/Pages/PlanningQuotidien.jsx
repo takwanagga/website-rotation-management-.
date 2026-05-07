@@ -41,7 +41,8 @@ const HEURES = [
   "04:00-06:00",
 ];
 
-const JOURS_SEMAINE = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+const JOURS_SEMAINE_FULL = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
+const MOIS_FULL = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
 function formatDateKey(date) {
@@ -59,55 +60,11 @@ function isSameDate(d1, d2) {
   );
 }
 
-function getCalendarDays(centerDate) {
-  const dates = [];
-  const center = new Date(centerDate);
-  center.setHours(0, 0, 0, 0);
-  for (let i = -7; i <= 7; i++) {
-    const d = new Date(center);
-    d.setDate(center.getDate() + i);
-    dates.push(d);
-  }
-  return dates;
-}
-
 function parseHeureRange(heureRange) {
   const [start, end] = heureRange.split("-");
   return { heuredebut: start, heurefin: end };
 }
 
-// ── Calendar helpers ──────────────────────────────────────────────────────────
-function getMonthCalendarWeeks(year, month) {
-  const weeks = [];
-  const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, month + 1, 0);
-
-  let startDate = new Date(firstDay);
-  const dayOfWeek = startDate.getDay();
-  const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-  startDate.setDate(startDate.getDate() + diff);
-
-  let current = new Date(startDate);
-  while (current <= lastDay || weeks.length < 6) {
-    const week = [];
-    for (let i = 0; i < 7; i++) {
-      week.push(new Date(current));
-      current.setDate(current.getDate() + 1);
-    }
-    weeks.push(week);
-    if (current > lastDay && weeks.length >= 5) break;
-  }
-
-  return weeks;
-}
-
-function getMonthName(month) {
-  const names = [
-    "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
-    "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre",
-  ];
-  return names[month];
-}
 
 // ── Conflict check ────────────────────────────────────────────────────────────
 function validateConflict({ assignments, dateKey, heure, ligneId, item, currentKey }) {
@@ -159,14 +116,8 @@ export default function PlanningQuotidien() {
   const [receveurs, setReceveurs]   = useState([]);
   const [buses, setBuses]           = useState([]);
 
-  const [calendarMonth, setCalendarMonth] = useState(() => new Date().getMonth());
-  const [calendarYear, setCalendarYear]   = useState(() => new Date().getFullYear());
 
-  const calendarWeeks = useMemo(
-    () => getMonthCalendarWeeks(calendarYear, calendarMonth),
-    [calendarYear, calendarMonth]
-  );
-  const calendarDays = useMemo(() => getCalendarDays(selectedDate), [selectedDate]);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const displayName =
     [user?.prenom, user?.nom].filter(Boolean).join(" ").trim() ||
@@ -516,39 +467,27 @@ export default function PlanningQuotidien() {
     }
   };
 
-  // ── Calendar navigation ────────────────────────────────────────────────────
-  const handlePrevMonth = () => {
-    if (calendarMonth === 0) { setCalendarMonth(11); setCalendarYear((y) => y - 1); }
-    else setCalendarMonth((m) => m - 1);
-  };
-
-  const handleNextMonth = () => {
-    if (calendarMonth === 11) { setCalendarMonth(0); setCalendarYear((y) => y + 1); }
-    else setCalendarMonth((m) => m + 1);
-  };
-
-  const handleGoToToday = () => {
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
-    setSelectedDate(now);
-    setCalendarMonth(now.getMonth());
-    setCalendarYear(now.getFullYear());
-  };
-
-  const handleSelectCalendarDay = (date) => {
-    const d = new Date(date);
-    d.setHours(0, 0, 0, 0);
+  // ── Date navigation ─────────────────────────────────────────────────────────
+  const handlePrevDay = () => {
+    const d = new Date(selectedDate);
+    d.setDate(d.getDate() - 1);
     setSelectedDate(d);
   };
 
-  const dayAssignmentCounts = useMemo(() => {
-    const counts = {};
-    Object.keys(assignments).forEach((key) => {
-      const dateKey = key.split("__")[0];
-      counts[dateKey] = (counts[dateKey] || 0) + 1;
-    });
-    return counts;
-  }, [assignments]);
+  const handleNextDay = () => {
+    const d = new Date(selectedDate);
+    d.setDate(d.getDate() + 1);
+    setSelectedDate(d);
+  };
+
+  const handleDateInputChange = (e) => {
+    const d = new Date(e.target.value + "T00:00:00");
+    if (!isNaN(d.getTime())) {
+      setSelectedDate(d);
+      setShowDatePicker(false);
+    }
+  };
+
 
   // ── Loading ─────────────────────────────────────────────────────────────────
   if (loading) {
@@ -577,8 +516,8 @@ export default function PlanningQuotidien() {
         <Toaster position="top-right" />
 
         {/* ── Top Navbar ── */}
-        <header className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between gap-4 sticky top-0 z-10">
-          <div className="flex-1 max-w-sm">
+        <header className="bg-white border-b border-gray-200 px-3 sm:px-6 py-3 flex items-center justify-between gap-2 sm:gap-4 sticky top-0 z-10">
+          <div className="flex-1 max-w-sm hidden sm:block">
             <div className="relative">
               <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
@@ -586,13 +525,14 @@ export default function PlanningQuotidien() {
               <input type="search" placeholder="Rechercher…" className="w-full pl-9 pr-4 py-2 text-sm bg-gray-100 border-none rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400" />
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button
               onClick={() => exportPlanningPDF(selectedDate, lignes, assignments, HEURES)}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 border border-gray-200 bg-white rounded-xl hover:bg-gray-50 transition"
+              className="flex items-center gap-1.5 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-gray-700 border border-gray-200 bg-white rounded-xl hover:bg-gray-50 transition"
             >
-              <FileText size={16} />
-              Exporter PDF
+              <FileText size={14} />
+              <span className="hidden sm:inline">Exporter PDF</span>
+              <span className="sm:hidden">PDF</span>
             </button>
             <NotificationBell />
             <div className="flex items-center gap-2 pl-2 border-l border-gray-200">
@@ -605,7 +545,7 @@ export default function PlanningQuotidien() {
           </div>
         </header>
 
-        <main className="flex-1 p-6">
+        <main className="flex-1 p-3 sm:p-4 md:p-6">
           {/* ── Conflict alerts ── */}
           {conflicts.length > 0 && (
             <div className="mb-4 bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
@@ -634,302 +574,214 @@ export default function PlanningQuotidien() {
           )}
 
           {/* ── AI Banner ── */}
-          <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 flex items-center justify-between gap-4 mb-6">
+          <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white text-lg flex-shrink-0">✦</div>
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white text-base sm:text-lg flex-shrink-0">✦</div>
               <div>
-                <p className="font-semibold text-indigo-900 text-sm">Optimisation Intelligente</p>
-                <p className="text-indigo-500 text-xs mt-0.5">Algorithme tenant compte de l'âge, des distances et des statuts bus.</p>
+                <p className="font-semibold text-indigo-900 text-xs sm:text-sm">Optimisation Intelligente</p>
+                <p className="text-indigo-500 text-[10px] sm:text-xs mt-0.5">Algorithme tenant compte de l'âge, des distances et des statuts bus.</p>
               </div>
             </div>
             <button
               onClick={handleAI}
               disabled={aiLoading}
-              className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white text-sm font-bold rounded-xl transition whitespace-nowrap shadow-sm"
+              className="w-full sm:w-auto px-4 sm:px-5 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white text-xs sm:text-sm font-bold rounded-xl transition whitespace-nowrap shadow-sm text-center"
             >
               {aiLoading ? "⏳ Optimisation…" : aiDone ? "✅ Optimisé !" : "Lancer l'IA"}
             </button>
           </div>
 
-          {/* ── Monthly Calendar ── */}
-          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm mb-5 overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 bg-gradient-to-r from-indigo-50 to-white">
-              <div className="flex items-center gap-3">
-                <Calendar size={18} className="text-indigo-600" />
-                <h3 className="text-base font-bold text-gray-800">{getMonthName(calendarMonth)} {calendarYear}</h3>
-              </div>
-              <div className="flex items-center gap-2">
-                <button onClick={handleGoToToday} className="px-3 py-1.5 text-xs font-semibold text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition">
-                  Aujourd'hui
-                </button>
-                <button onClick={handlePrevMonth} className="p-1.5 rounded-lg hover:bg-gray-100 transition"><ChevronLeft size={16} /></button>
-                <button onClick={handleNextMonth} className="p-1.5 rounded-lg hover:bg-gray-100 transition"><ChevronRight size={16} /></button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-7 border-b border-gray-100">
-              {JOURS_SEMAINE.map((jour) => (
-                <div key={jour} className="px-2 py-2 text-center text-[11px] font-bold text-gray-400 uppercase tracking-wider">{jour}</div>
-              ))}
-            </div>
-
-            <div className="divide-y divide-gray-50">
-              {calendarWeeks.map((week, wi) => (
-                <div key={wi} className="grid grid-cols-7">
-                  {week.map((day) => {
-                    const isCurrentMonth = day.getMonth() === calendarMonth;
-                    const isSelected = isSameDate(day, selectedDate);
-                    const isToday = isSameDate(day, today);
-                    const dayKey = formatDateKey(day);
-                    const hasData = dayAssignmentCounts[dayKey] > 0;
-                    return (
-                      <button
-                        key={dayKey}
-                        onClick={() => handleSelectCalendarDay(day)}
-                        className={`relative px-1 py-2.5 text-center transition-all hover:bg-indigo-50 group ${!isCurrentMonth ? "opacity-30" : ""}`}
-                      >
-                        <div className={`w-8 h-8 mx-auto flex items-center justify-center rounded-full text-sm font-medium transition-all ${
-                          isSelected ? "bg-indigo-600 text-white shadow-md shadow-indigo-200 scale-110"
-                          : isToday ? "bg-indigo-100 text-indigo-700 font-bold ring-2 ring-indigo-300"
-                          : "text-gray-700 group-hover:bg-indigo-100"
-                        }`}>
-                          {day.getDate()}
-                        </div>
-                        {hasData && !isSelected && (
-                          <div className="absolute bottom-1 left-1/2 -translate-x-1/2"><div className="w-1 h-1 rounded-full bg-indigo-400" /></div>
-                        )}
-                        {isSelected && hasData && (
-                          <div className="absolute bottom-1 left-1/2 -translate-x-1/2"><div className="w-1 h-1 rounded-full bg-white/60" /></div>
-                        )}
-                      </button>
-                    );
-                  })}
+          {/* ── Compact Date Picker ── */}
+          <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-5">
+            <button onClick={handlePrevDay} className="p-2 sm:p-2.5 rounded-xl bg-white border border-gray-200 hover:bg-indigo-50 hover:border-indigo-300 active:scale-95 transition shadow-sm" title="Jour précédent">
+              <ChevronLeft size={16} className="text-gray-600 sm:w-[18px] sm:h-[18px]" />
+            </button>
+            <div className="relative flex-1 sm:flex-none">
+              <button
+                onClick={() => setShowDatePicker((v) => !v)}
+                className="w-full sm:w-auto flex items-center gap-2 sm:gap-3 px-3 sm:px-5 py-2 sm:py-2.5 bg-white border border-gray-200 rounded-xl hover:border-indigo-300 transition shadow-sm"
+              >
+                <Calendar size={16} className="text-indigo-600 flex-shrink-0" />
+                <div className="text-left min-w-0">
+                  <div className="text-xs sm:text-sm font-bold text-gray-800 truncate">
+                    {JOURS_SEMAINE_FULL[selectedDate.getDay()]} {selectedDate.getDate()} {MOIS_FULL[selectedDate.getMonth()]} {selectedDate.getFullYear()}
+                  </div>
+                  {isSameDate(selectedDate, today) && (
+                    <div className="text-[10px] text-indigo-600 font-semibold">Aujourd'hui</div>
+                  )}
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* ── Date strip navigator ── */}
-          <div className="bg-white border border-gray-200 rounded-xl p-3 mb-5 shadow-sm">
-            <div className="flex items-center gap-2 overflow-x-auto">
-              <button onClick={() => { const d = new Date(selectedDate); d.setDate(d.getDate() - 1); setSelectedDate(d); }} className="p-1.5 rounded-lg hover:bg-gray-100 flex-shrink-0">
-                <ChevronLeft size={18} />
               </button>
-              {calendarDays.map((date) => {
-                const sel     = isSameDate(date, selectedDate);
-                const isToday = isSameDate(date, today);
-                return (
-                  <button
-                    key={formatDateKey(date)}
-                    onClick={() => setSelectedDate(date)}
-                    className={`min-w-[56px] px-2 py-2 rounded-lg text-center transition flex-shrink-0 relative ${
-                      sel ? "bg-indigo-600 text-white shadow-md" : "hover:bg-gray-50 text-gray-600"
-                    }`}
-                  >
-                    <div className="text-xs uppercase">{date.toLocaleDateString("fr-FR", { weekday: "short" })}</div>
-                    <div className="text-sm font-bold mt-0.5">{date.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" })}</div>
-                    {isToday && !sel && <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-indigo-500 rounded-full" />}
-                    {isToday && sel && <div className="text-[9px] text-indigo-200 font-semibold mt-0.5">Aujourd'hui</div>}
-                  </button>
-                );
-              })}
-              <button onClick={() => { const d = new Date(selectedDate); d.setDate(d.getDate() + 1); setSelectedDate(d); }} className="p-1.5 rounded-lg hover:bg-gray-100 flex-shrink-0">
-                <ChevronRight size={18} />
-              </button>
-            </div>
-          </div>
-
-          {/* ── Selected date heading ── */}
-          <div className="mb-4">
-            <h2 className="text-lg font-bold text-gray-800">
-              Planning du{" "}
-              <span className="text-indigo-600">
-                {selectedDate.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
-              </span>
-              {isSameDate(selectedDate, today) && (
-                <span className="ml-2 text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-semibold align-middle">Aujourd'hui</span>
+              {showDatePicker && (
+                <div className="absolute top-full left-0 mt-2 z-50 bg-white border border-gray-200 rounded-xl shadow-lg p-3">
+                  <input
+                    type="date"
+                    value={formatDateKey(selectedDate)}
+                    onChange={handleDateInputChange}
+                    className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                    autoFocus
+                  />
+                </div>
               )}
-            </h2>
+            </div>
+            <button onClick={handleNextDay} className="p-2 sm:p-2.5 rounded-xl bg-white border border-gray-200 hover:bg-indigo-50 hover:border-indigo-300 active:scale-95 transition shadow-sm" title="Jour suivant">
+              <ChevronRight size={16} className="text-gray-600 sm:w-[18px] sm:h-[18px]" />
+            </button>
           </div>
 
-          {/* ── Main layout: sidebar + grid ── */}
-          <div className="flex gap-5 items-start">
-            {/* ── Resource panel ── */}
-            <div className="w-56 flex-shrink-0 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Ressources</p>
-                <p className="text-xs text-gray-400 mt-0.5">Glisser vers un créneau</p>
+          {/* ── Resources (horizontal) ── */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-5">
+            {/* Buses */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="px-4 py-2.5 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">🚌 Bus</span>
+                <span className="text-xs text-gray-400">{buses.length}</span>
               </div>
-              <div className="overflow-y-auto max-h-[65vh] p-4 space-y-5">
-                {/* Buses */}
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">🚌 Bus</span>
-                    <span className="ml-auto text-xs text-gray-400">{buses.length}</span>
-                  </div>
-                  {buses.length === 0 && <p className="text-xs text-gray-400">Aucun bus actif</p>}
-                  {buses.map((b) => (
-                    <div key={b._id} draggable onDragStart={(e) => handleDragStart(e, { ...b, type: "bus" })}
-                      className="flex items-center gap-2 p-2.5 rounded-lg border border-indigo-100 bg-indigo-50 mb-1.5 cursor-grab hover:shadow-sm hover:border-indigo-300 transition">
-                      <div className="min-w-0">
-                        <div className="text-xs font-bold text-indigo-900 truncate">{b.matricule || b.immatriculation || "—"}</div>
-                        <div className="text-xs text-indigo-400 truncate">{b.model || "Bus"}</div>
-                      </div>
+              <div className="p-3 overflow-y-auto max-h-[180px] space-y-1.5">
+                {buses.length === 0 && <p className="text-xs text-gray-400">Aucun bus actif</p>}
+                {buses.map((b) => (
+                  <div key={b._id} draggable onDragStart={(e) => handleDragStart(e, { ...b, type: "bus" })}
+                    className="flex items-center gap-2 p-2 rounded-lg border border-indigo-100 bg-indigo-50 cursor-grab hover:shadow-sm hover:border-indigo-300 transition">
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-indigo-900 truncate">{b.matricule || b.immatriculation || "—"}</div>
+                      <div className="text-[10px] text-indigo-400 truncate">{b.model || "Bus"}</div>
                     </div>
-                  ))}
-                </div>
-                {/* Chauffeurs */}
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">🧑‍✈️ Chauffeurs</span>
-                    <span className="ml-auto text-xs text-gray-400">{chauffeurs.length}</span>
                   </div>
-                  {chauffeurs.length === 0 && <p className="text-xs text-gray-400">Aucun chauffeur actif</p>}
-                  {chauffeurs.map((c) => (
-                    <div key={c._id} draggable onDragStart={(e) => handleDragStart(e, { ...c, type: "driver" })}
-                      className="flex items-center gap-2 p-2.5 rounded-lg border border-emerald-100 bg-emerald-50 mb-1.5 cursor-grab hover:shadow-sm hover:border-emerald-300 transition">
-                      <div className="w-6 h-6 rounded-full bg-emerald-200 flex items-center justify-center text-emerald-700 text-xs font-bold flex-shrink-0">{c.nom?.charAt(0)}</div>
-                      <div className="min-w-0">
-                        <div className="text-xs font-bold text-emerald-900 truncate">{c.nom} {c.prenom}</div>
-                        <div className="text-xs text-emerald-400">{c.age ? `${c.age} ans` : "Chauffeur"}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                {/* Receveurs */}
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">🎫 Receveurs</span>
-                    <span className="ml-auto text-xs text-gray-400">{receveurs.length}</span>
-                  </div>
-                  {receveurs.length === 0 && <p className="text-xs text-gray-400">Aucun receveur actif</p>}
-                  {receveurs.map((r) => (
-                    <div key={r._id} draggable onDragStart={(e) => handleDragStart(e, { ...r, type: "receveur" })}
-                      className="flex items-center gap-2 p-2.5 rounded-lg border border-amber-100 bg-amber-50 mb-1.5 cursor-grab hover:shadow-sm hover:border-amber-300 transition">
-                      <div className="w-6 h-6 rounded-full bg-amber-200 flex items-center justify-center text-amber-700 text-xs font-bold flex-shrink-0">{r.nom?.charAt(0)}</div>
-                      <div className="min-w-0">
-                        <div className="text-xs font-bold text-amber-900 truncate">{r.nom} {r.prenom}</div>
-                        <div className="text-xs text-amber-400">{r.age ? `${r.age} ans` : "Receveur"}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                ))}
               </div>
             </div>
+            {/* Chauffeurs */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="px-4 py-2.5 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">🧑‍✈️ Chauffeurs</span>
+                <span className="text-xs text-gray-400">{chauffeurs.length}</span>
+              </div>
+              <div className="p-3 overflow-y-auto max-h-[180px] space-y-1.5">
+                {chauffeurs.length === 0 && <p className="text-xs text-gray-400">Aucun chauffeur actif</p>}
+                {chauffeurs.map((c) => (
+                  <div key={c._id} draggable onDragStart={(e) => handleDragStart(e, { ...c, type: "driver" })}
+                    className="flex items-center gap-2 p-2 rounded-lg border border-emerald-100 bg-emerald-50 cursor-grab hover:shadow-sm hover:border-emerald-300 transition">
+                    <div className="w-5 h-5 rounded-full bg-emerald-200 flex items-center justify-center text-emerald-700 text-[10px] font-bold flex-shrink-0">{c.nom?.charAt(0)}</div>
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-emerald-900 truncate">{c.nom} {c.prenom}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* Receveurs */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="px-4 py-2.5 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">🎫 Receveurs</span>
+                <span className="text-xs text-gray-400">{receveurs.length}</span>
+              </div>
+              <div className="p-3 overflow-y-auto max-h-[180px] space-y-1.5">
+                {receveurs.length === 0 && <p className="text-xs text-gray-400">Aucun receveur actif</p>}
+                {receveurs.map((r) => (
+                  <div key={r._id} draggable onDragStart={(e) => handleDragStart(e, { ...r, type: "receveur" })}
+                    className="flex items-center gap-2 p-2 rounded-lg border border-amber-100 bg-amber-50 cursor-grab hover:shadow-sm hover:border-amber-300 transition">
+                    <div className="w-5 h-5 rounded-full bg-amber-200 flex items-center justify-center text-amber-700 text-[10px] font-bold flex-shrink-0">{r.nom?.charAt(0)}</div>
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-amber-900 truncate">{r.nom} {r.prenom}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
 
-            {/* ── Planning grid ── */}
-            <div className="flex-1 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-200 bg-gray-50">
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-28 sticky left-0 bg-gray-50 z-10">Heure</th>
-                      {lignes.length === 0 ? (
-                        <th className="px-4 py-3 text-xs text-gray-400 font-normal">Aucune ligne disponible</th>
-                      ) : (
-                        lignes.map((l) => (
-                          <th key={l._id} className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider border-l border-gray-100 min-w-[180px]">
-                            {l.libelle}
-                            {l.distance ? <span className="ml-1 text-gray-400 font-normal normal-case">({l.distance} km)</span> : null}
-                          </th>
-                        ))
-                      )}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {HEURES.map((heure) => (
-                      <tr key={heure} className="border-b border-gray-100 last:border-0">
-                        <td className="px-4 py-3 text-xs font-bold text-gray-600 whitespace-nowrap align-top sticky left-0 bg-white z-10 border-r border-gray-100">
-                          {heure}
-                          {(parseInt(heure.split(":")[0]) >= 22 || parseInt(heure.split(":")[0]) < 6) && <span>🌙</span>}
-                        </td>
-                        {lignes.length === 0 ? (
-                          <td className="px-4 py-3 text-xs text-gray-300 text-center">—</td>
-                        ) : (
-                          lignes.map((ligne) => {
-                            const slotAssignments = getSlotAssignments(selectedDate, heure, ligne);
-                            const cellStatus      = getCellStatus(assignments, dateKey, heure, ligne);
 
-                            if (showIncompleteOnly && cellStatus !== "incomplete")
-                              return <td key={ligne._id} className="px-3 py-2 border-l border-gray-100 bg-gray-50/30 align-top" />;
-
-                            const hasConflict = slotAssignments.some(({ key }) =>
-                              conflicts.some((c) => {
-                                const [d, h] = key.split("__");
-                                return c.dateKey === d && c.heure === h;
-                              })
-                            );
-
-                            let cellBg = "";
-                            if (dragging) cellBg = "bg-blue-50/40 ring-1 ring-inset ring-blue-100";
-                            else if (hasConflict) cellBg = "bg-red-50";
-                            else if (cellStatus === "complete") cellBg = "bg-emerald-50/50";
-                            else if (cellStatus === "incomplete") cellBg = "bg-amber-50/60";
-
-                            return (
-                              <td
-                                key={ligne._id}
-                                onDragOver={handleDragOver}
-                                onDrop={(e) => handleDrop(e, heure, ligne, selectedDate)}
-                                className={`px-3 py-2 border-l border-gray-100 min-h-[80px] align-top transition-colors relative ${cellBg}`}
-                              >
-                                {cellStatus === "complete" && <CheckCircle2 size={12} className="absolute top-1.5 right-1.5 text-emerald-500" />}
-                                {cellStatus === "incomplete" && <AlertTriangle size={12} className="absolute top-1.5 right-1.5 text-amber-500" title="Incomplet" />}
-
-                                {slotAssignments.length === 0 ? (
-                                  <span className="text-xs text-gray-300 font-medium">Vide</span>
-                                ) : (
-                                  <div className="space-y-1">
-                                    {slotAssignments.map(({ key, value: assignment }) => {
-                                      const label = assignment.type === "bus"
-                                        ? assignment.matricule || assignment.immatriculation || "Bus"
-                                        : `${assignment.nom ?? ""} ${(assignment.prenom ?? "").charAt(0)}.`;
-                                      const colorClass = assignment.type === "bus" ? "bg-indigo-100 text-indigo-800"
-                                        : assignment.type === "driver" ? "bg-emerald-100 text-emerald-800"
-                                        : "bg-amber-100 text-amber-800";
-                                      const icon = assignment.type === "bus" ? "🚌" : assignment.type === "driver" ? "🧑‍✈️" : "🎫";
-                                      return (
-                                        <div key={key} className={`flex items-center justify-between gap-1 px-2 py-1 rounded-lg text-xs font-semibold ${colorClass}`}>
-                                          <div className="flex items-center gap-1 min-w-0">
-                                            <span>{icon}</span>
-                                            <span className="truncate">{label}</span>
-                                          </div>
-                                          <button onClick={() => handleRemove(key)} className="opacity-50 hover:opacity-100 flex-shrink-0 font-bold leading-none ml-1" title="Retirer">×</button>
-                                        </div>
-                                      );
-                                    })}
-                                    {cellStatus === "incomplete" && (
-                                      <div className="text-[10px] text-amber-600 italic pt-0.5">
-                                        {!assignments[`${dateKey}__${heure}__${ligne._id}__bus`] && "🚌 bus manquant  "}
-                                        {!assignments[`${dateKey}__${heure}__${ligne._id}__driver`] && "🧑‍✈️ chauffeur manquant  "}
-                                        {!assignments[`${dateKey}__${heure}__${ligne._id}__receveur`] && "🎫 receveur manquant"}
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-                              </td>
-                            );
-                          })
-                        )}
-                      </tr>
+          {/* ── Planning grid (transposed: lignes=rows, heures=columns) ── */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden" style={{ touchAction: 'pan-x pan-y' }}>
+            <div className="overflow-x-auto scroll-smooth" style={{ WebkitOverflowScrolling: 'touch' }}>
+              <table className="w-full border-collapse text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200 bg-gray-50">
+                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-36 sticky left-0 bg-gray-50 z-10">Ligne</th>
+                    {HEURES.map((h) => (
+                      <th key={h} className="px-3 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider border-l border-gray-100 min-w-[140px] whitespace-nowrap">
+                        {h}
+                        {(parseInt(h.split(":")[0]) >= 22 || parseInt(h.split(":")[0]) < 6) && <span className="ml-1">🌙</span>}
+                      </th>
                     ))}
-                  </tbody>
-                </table>
-              </div>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lignes.length === 0 ? (
+                    <tr><td colSpan={HEURES.length + 1} className="px-4 py-6 text-center text-xs text-gray-400">Aucune ligne disponible</td></tr>
+                  ) : (
+                    lignes.map((ligne) => (
+                      <tr key={ligne._id} className="border-b border-gray-100 last:border-0">
+                        <td className="px-4 py-3 text-xs font-bold text-gray-700 whitespace-nowrap align-top sticky left-0 bg-white z-10 border-r border-gray-100">
+                          {ligne.libelle}
+                          {ligne.distance ? <span className="block text-[10px] text-gray-400 font-normal">{ligne.distance} km</span> : null}
+                        </td>
+                        {HEURES.map((heure) => {
+                          const slotAssignments = getSlotAssignments(selectedDate, heure, ligne);
+                          const cellStatus = getCellStatus(assignments, dateKey, heure, ligne);
+                          if (showIncompleteOnly && cellStatus !== "incomplete")
+                            return <td key={heure} className="px-2 py-2 border-l border-gray-100 bg-gray-50/30 align-top" />;
+                          const hasConflict = slotAssignments.some(({ key }) =>
+                            conflicts.some((c) => { const [d, h] = key.split("__"); return c.dateKey === d && c.heure === h; })
+                          );
+                          let cellBg = "";
+                          if (dragging) cellBg = "bg-blue-50/40 ring-1 ring-inset ring-blue-100";
+                          else if (hasConflict) cellBg = "bg-red-50";
+                          else if (cellStatus === "complete") cellBg = "bg-emerald-50/50";
+                          else if (cellStatus === "incomplete") cellBg = "bg-amber-50/60";
+                          return (
+                            <td key={heure} onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, heure, ligne, selectedDate)}
+                              className={`px-2 py-2 border-l border-gray-100 min-w-[120px] sm:min-w-[140px] align-top transition-all duration-150 relative ${cellBg} ${dragging ? 'hover:ring-2 hover:ring-inset hover:ring-indigo-300 hover:bg-indigo-50/60 hover:scale-[1.02]' : ''}`}>
+                              {cellStatus === "complete" && <CheckCircle2 size={11} className="absolute top-1 right-1 text-emerald-500" />}
+                              {cellStatus === "incomplete" && <AlertTriangle size={11} className="absolute top-1 right-1 text-amber-500" />}
+                              {slotAssignments.length === 0 ? (
+                                <span className="text-[10px] text-gray-300">Vide</span>
+                              ) : (
+                                <div className="space-y-0.5">
+                                  {slotAssignments.map(({ key, value: a }) => {
+                                    const label = a.type === "bus" ? (a.matricule || a.immatriculation || "Bus") : `${a.nom ?? ""} ${(a.prenom ?? "").charAt(0)}.`;
+                                    const cc = a.type === "bus" ? "bg-indigo-100 text-indigo-800" : a.type === "driver" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800";
+                                    const icon = a.type === "bus" ? "🚌" : a.type === "driver" ? "🧑‍✈️" : "🎫";
+                                    return (
+                                      <div key={key} className={`flex items-center justify-between gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold ${cc}`}>
+                                        <div className="flex items-center gap-0.5 min-w-0"><span>{icon}</span><span className="truncate">{label}</span></div>
+                                        <button onClick={() => handleRemove(key)} className="opacity-50 hover:opacity-100 flex-shrink-0 font-bold leading-none" title="Retirer">×</button>
+                                      </div>
+                                    );
+                                  })}
+                                  {cellStatus === "incomplete" && (
+                                    <div className="text-[9px] text-amber-600 italic">
+                                      {!assignments[`${dateKey}__${heure}__${ligne._id}__bus`] && "🚌 "}
+                                      {!assignments[`${dateKey}__${heure}__${ligne._id}__driver`] && "🧑‍✈️ "}
+                                      {!assignments[`${dateKey}__${heure}__${ligne._id}__receveur`] && "🎫"}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
+
 
           {/* ── Action buttons ── */}
-          <div className="mt-5 flex items-center gap-3 flex-wrap">
-            <button onClick={handleSaveDraft} disabled={savingDraft || publishing}
-              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-sm font-bold rounded-xl transition shadow-sm">
-              {savingDraft ? "Enregistrement…" : "💾 Enregistrer brouillon"}
-            </button>
-            <button onClick={handlePublish} disabled={publishing || savingDraft}
-              className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-sm font-bold rounded-xl transition shadow-sm">
-              {publishing ? "Publication…" : "📤 Publier & notifier"}
-            </button>
-            <div className="ml-auto flex items-center gap-2 text-xs text-gray-500">
+          <div className="mt-4 sm:mt-5 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+            <div className="flex gap-2 sm:gap-3">
+              <button onClick={handleSaveDraft} disabled={savingDraft || publishing}
+                className="flex-1 sm:flex-none px-4 sm:px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs sm:text-sm font-bold rounded-xl transition shadow-sm active:scale-95">
+                {savingDraft ? "Enregistrement…" : "💾 Enregistrer brouillon"}
+              </button>
+              <button onClick={handlePublish} disabled={publishing || savingDraft}
+                className="flex-1 sm:flex-none px-4 sm:px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-xs sm:text-sm font-bold rounded-xl transition shadow-sm active:scale-95">
+                {publishing ? "Publication…" : "📤 Publier & notifier"}
+              </button>
+            </div>
+            <div className="sm:ml-auto flex items-center justify-center sm:justify-end gap-2 text-xs text-gray-500">
               {incompleteCellCount > 0 ? (
                 <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-amber-100 text-amber-700 rounded-full font-semibold">
                   <AlertTriangle size={12} />{incompleteCellCount} incomplet(s)

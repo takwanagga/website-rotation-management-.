@@ -198,14 +198,14 @@ const AdminDashboard = () => {
           {/* KPI cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {[
-              { label: "Employés", value: empStatus.total, sub: `${empStatus.actif} actifs`, icon: Users, color: "indigo" },
-              { label: "Bus", value: busStatusData.total, sub: `${busStatusData.actif} actifs`, icon: Bus, color: "violet" },
-              { label: "Lignes", value: lineStatus.total, sub: `${lineStatus.actif} actives`, icon: MapPin, color: "emerald" },
-              { label: "Heures totales", value: (totalDay + totalNight) + "h", sub: `${totalDay}h jour / ${totalNight}h nuit`, icon: Activity, color: "amber" },
-            ].map(({ label, value, sub, icon: Icon, color }) => (
+              { label: "Employés", value: empStatus.total, sub: `${empStatus.actif} actifs`, icon: Users, bgClass: "bg-indigo-100", textClass: "text-indigo-600" },
+              { label: "Bus", value: busStatusData.total, sub: `${busStatusData.actif} actifs`, icon: Bus, bgClass: "bg-violet-100", textClass: "text-violet-600" },
+              { label: "Lignes", value: lineStatus.total, sub: `${lineStatus.actif} actives`, icon: MapPin, bgClass: "bg-emerald-100", textClass: "text-emerald-600" },
+              { label: "Heures totales", value: (totalDay + totalNight) + "h", sub: `${totalDay}h jour / ${totalNight}h nuit`, icon: Activity, bgClass: "bg-amber-100", textClass: "text-amber-600" },
+            ].map(({ label, value, sub, icon: Icon, bgClass, textClass }) => (
               <div key={label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-                <div className={`w-10 h-10 rounded-xl bg-${color}-100 flex items-center justify-center mb-3`}>
-                  <Icon size={20} className={`text-${color}-600`} />
+                <div className={`w-10 h-10 rounded-xl ${bgClass} flex items-center justify-center mb-3`}>
+                  <Icon size={20} className={textClass} />
                 </div>
                 <p className="text-2xl font-bold text-gray-900">{value}</p>
                 <p className="text-sm font-medium text-gray-600 mt-0.5">{label}</p>
@@ -218,7 +218,14 @@ const AdminDashboard = () => {
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
             <h2 className="text-base font-bold text-gray-800 mb-4">Heures de travail — Top 10 employés</h2>
             <div style={{ height: 280 }}>
-              <Bar data={workHoursChartData} options={barOptions} />
+              {topEmployees.length > 0 ? (
+                <Bar data={workHoursChartData} options={barOptions} />
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center text-gray-400">
+                  <Activity size={40} className="mb-2 opacity-50" />
+                  <p className="text-sm">Aucune heure enregistrée (nécessite des plannings publiés)</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -245,7 +252,13 @@ const AdminDashboard = () => {
                 <Sun size={16} className="text-amber-500" />/<Moon size={16} className="text-indigo-500" /> Jour vs Nuit
               </h2>
               <div style={{ height: 220 }}>
-                <Doughnut data={dayNightData} options={doughnutOptions} />
+                {totalDay + totalNight > 0 ? (
+                  <Doughnut data={dayNightData} options={doughnutOptions} />
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-gray-400">
+                    <p className="text-sm">Aucune donnée</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

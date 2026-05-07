@@ -25,6 +25,7 @@ export default function Employees() {
   const [filteredEmployes, setFilteredEmployes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [showInactive, setShowInactive] = useState(false);
   const [page, setPage] = useState(1);
   const perPage = 10;
 
@@ -53,15 +54,26 @@ export default function Employees() {
 
   useEffect(() => {
     const q = search.toLowerCase();
-    const result = employes.filter(
+    
+    const activeFilter = showInactive 
+      ? employes.filter(emp => emp.statut === "inactif")
+      : employes.filter(emp => emp.statut !== "inactif");
+
+    const result = activeFilter.filter(
       (emp) =>
         emp.nom?.toLowerCase().includes(q) ||
         emp.prenom?.toLowerCase().includes(q) ||
-        emp.mecano?.toLowerCase().includes(q)
+        emp.mecano?.toLowerCase().includes(q) ||
+        emp.email?.toLowerCase().includes(q) ||
+        emp.telephone?.toLowerCase().includes(q) ||
+        emp.role?.toLowerCase().includes(q) ||
+        emp.statut?.toLowerCase().includes(q) ||
+        emp.localisation?.toLowerCase().includes(q) ||
+        (emp.age && String(emp.age).includes(q))
     );
     setFilteredEmployes(result);
     setPage(1);
-  }, [search, employes]);
+  }, [search, employes, showInactive]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -150,7 +162,7 @@ export default function Employees() {
 
         <div className="bg-white shadow-sm p-4 md:p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <h1 className="text-2xl md:text-3xl font-bold text-gray-800">
-            Gestion des Employés
+            {showInactive ? "Employés Inactifs" : "Gestion des Employés"}
           </h1>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
             <div className="relative">
@@ -168,12 +180,25 @@ export default function Employees() {
             </div>
             <button
               type="button"
-              onClick={() => openForm()}
-              className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+              onClick={() => setShowInactive(!showInactive)}
+              className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-colors whitespace-nowrap text-sm font-medium ${
+                showInactive 
+                  ? "bg-gray-200 text-gray-800 hover:bg-gray-300" 
+                  : "bg-red-50 text-red-600 border border-red-100 hover:bg-red-100"
+              }`}
             >
-              <Plus size={18} />
-              Ajouter
+              📦 {showInactive ? "Retour aux actifs" : `Voir les inactifs (${employes.filter(e => e.statut === "inactif").length})`}
             </button>
+            {!showInactive && (
+              <button
+                type="button"
+                onClick={() => openForm()}
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+              >
+                <Plus size={18} />
+                Ajouter
+              </button>
+            )}
           </div>
         </div>
 

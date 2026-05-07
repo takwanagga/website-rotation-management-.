@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import AdminSidebar from "../components/AdminSidebar.jsx";
 import LigneTable from "../components/lignes/LigneTable.jsx";
 import { Plus, X, Search } from "lucide-react";
@@ -18,6 +18,7 @@ export default function Lignes() {
   const [filteredLignes, setFilteredLignes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [showInactive, setShowInactive] = useState(false);
   const [page, setPage] = useState(1);
   const perPage = 10;
 
@@ -46,15 +47,23 @@ export default function Lignes() {
 
   useEffect(() => {
     const q = search.toLowerCase();
-    const result = lignes.filter(
+    
+    const activeFilter = showInactive 
+      ? lignes.filter(ligne => ligne.status === "inactif" || ligne.statut === "inactif")
+      : lignes.filter(ligne => ligne.status !== "inactif" && ligne.statut !== "inactif");
+
+    const result = activeFilter.filter(
       (ligne) =>
         ligne.libelle?.toLowerCase().includes(q) ||
         ligne.debutDeLigne?.toLowerCase().includes(q) ||
-        ligne.finDeLigne?.toLowerCase().includes(q)
+        ligne.finDeLigne?.toLowerCase().includes(q) ||
+        ligne.status?.toLowerCase().includes(q) ||
+        ligne.statut?.toLowerCase().includes(q) ||
+        (ligne.distance && String(ligne.distance).includes(q))
     );
     setFilteredLignes(result);
     setPage(1);
-  }, [search, lignes]);
+  }, [search, lignes, showInactive]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -119,7 +128,7 @@ export default function Lignes() {
 
         <div className="bg-white shadow-sm p-4 md:p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <h1 className="text-2xl md:text-3xl font-bold text-gray-800">
-            Gestion des Lignes
+            {showInactive ? "Lignes Inactives" : "Gestion des Lignes"}
           </h1>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
             <div className="relative">
@@ -137,12 +146,25 @@ export default function Lignes() {
             </div>
             <button
               type="button"
-              onClick={() => openForm()}
-              className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+              onClick={() => setShowInactive(!showInactive)}
+              className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-colors whitespace-nowrap text-sm font-medium ${
+                showInactive 
+                  ? "bg-gray-200 text-gray-800 hover:bg-gray-300" 
+                  : "bg-red-50 text-red-600 border border-red-100 hover:bg-red-100"
+              }`}
             >
-              <Plus size={18} />
-              Ajouter
+              📦 {showInactive ? "Retour aux actives" : `Voir les inactives (${lignes.filter(l => l.status === "inactif" || l.statut === "inactif").length})`}
             </button>
+            {!showInactive && (
+              <button
+                type="button"
+                onClick={() => openForm()}
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+              >
+                <Plus size={18} />
+                Ajouter
+              </button>
+            )}
           </div>
         </div>
 
